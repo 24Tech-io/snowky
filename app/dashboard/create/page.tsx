@@ -154,12 +154,24 @@ export default function CreateProjectPage() {
 
             const project = await res.json();
 
-            // 2. Upload Files if any
-            if (pendingFiles.length > 0) {
+            // 2. Train with files and/or manual content (only if there's something to train)
+            const hasFiles = pendingFiles.length > 0;
+            const hasManualContent = formData.manualContent && formData.manualContent.trim().length > 0;
+
+            if (hasFiles || hasManualContent) {
                 const uploadFormData = new FormData();
-                pendingFiles.forEach(file => {
-                    uploadFormData.append('file', file);
-                });
+
+                // Add files if any
+                if (hasFiles) {
+                    pendingFiles.forEach(file => {
+                        uploadFormData.append('file', file);
+                    });
+                }
+
+                // Add manual content if any
+                if (hasManualContent) {
+                    uploadFormData.append('text', formData.manualContent);
+                }
 
                 const uploadRes = await fetch(`/api/projects/${project.id}/train`, {
                     method: 'POST',
@@ -167,7 +179,7 @@ export default function CreateProjectPage() {
                 });
 
                 if (!uploadRes.ok) {
-                    console.error("File upload failed but project created");
+                    console.error("Training failed but project created");
                     // Continue anyway, project is created
                 }
             }
@@ -350,615 +362,723 @@ export default function CreateProjectPage() {
                 maximum: `*clears throat dramatically* ${emoji}${emoji} AND SO THE EPIC TALE BEGINS! 📖✨ Our legendary adventure awaits! 🏰⚔️ What glorious quest brings you here? 💫🐉`
             }
         };
-
         const messages = personalityMessages[formData.tone] || personalityMessages.friendly;
         return messages[formData.emojiUsage as keyof typeof messages] || messages.medium;
     };
 
+    // Prevent body scroll to avoid double scrollbars
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, []);
+
     return (
-        <div className="create-content" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            {/* Progress Steps */}
-            <div className="create-progress">
-                {steps.map((s, i) => (
-                    <div key={s.step} style={{ display: 'flex', alignItems: 'center' }}>
-                        <div className={`progress-step ${currentStep === s.step ? 'active' : ''} ${currentStep > s.step ? 'completed' : ''}`}>
-                            <div className="progress-step-number">
+        <div
+            className={currentStep === 2 ? 'hide-scrollbar' : ''}
+            style={{
+                height: 'calc(100vh - 72px)',
+                position: 'relative',
+                overflow: currentStep === 1 ? 'hidden' : 'auto'
+            }}>
+            {/* Left Sidebar - Fixed */}
+            <div style={{
+                position: 'fixed',
+                top: '60px',
+                left: 0,
+                width: '220px',
+                height: 'calc(100vh - 60px)',
+                background: 'white',
+                borderRight: '1px solid #e2e8f0',
+                padding: '1.5rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                zIndex: 100
+            }}>
+                <Link href="/dashboard" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: '#64748b',
+                    textDecoration: 'none',
+                    fontSize: '0.9rem',
+                    marginBottom: '1rem'
+                }}>
+                    <i className="fas fa-arrow-left"></i> Dashboard
+                </Link>
+
+                {
+                    steps.map((s, i) => (
+                        <div
+                            key={s.step}
+                            onClick={() => i < currentStep && setCurrentStep(s.step)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                cursor: i < currentStep ? 'pointer' : 'default',
+                                background: currentStep === s.step ? '#f0f9ff' : 'transparent',
+                                borderLeft: currentStep === s.step ? '3px solid #6366f1' : '3px solid transparent'
+                            }}
+                        >
+                            <div style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: currentStep > s.step ? '#10b981' : currentStep === s.step ? '#6366f1' : '#e2e8f0',
+                                color: currentStep >= s.step ? 'white' : '#94a3b8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.8rem',
+                                fontWeight: 600
+                            }}>
                                 {currentStep > s.step ? <i className="fas fa-check"></i> : s.step}
                             </div>
-                            <span className="progress-step-label">{s.title}</span>
+                            <span style={{
+                                fontSize: '0.9rem',
+                                fontWeight: currentStep === s.step ? 600 : 400,
+                                color: currentStep === s.step ? '#1e293b' : '#64748b'
+                            }}>
+                                {s.title}
+                            </span>
                         </div>
-                        {i < steps.length - 1 && (
-                            <div className={`progress-line ${currentStep > s.step ? 'active' : ''}`}></div>
-                        )}
-                    </div>
-                ))}
-            </div>
+                    ))
+                }
+            </div >
 
-            {/* Create Card */}
-            <div className="create-card" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 140px)', overflow: 'hidden', padding: 0 }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+            {/* Main Content - With left margin and bottom padding for fixed elements */}
+            < div style={{
+                marginLeft: '220px',
+                paddingBottom: '80px',
+                background: 'white',
+                minHeight: 'calc(100vh - 60px)',
+                overflow: currentStep <= 2 ? 'hidden' : 'auto'
+            }}>
+                {/* Content Area */}
+                < div style={{ padding: '1.5rem 2rem' }}>
                     {/* Step 1: Basic Info */}
-                    {currentStep === 1 && (
-                        <div className="create-step">
-                            <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
-                                <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
-                                    <span className="step-icon">🚀</span>
+                    {
+                        currentStep === 1 && (
+                            <div className="create-step">
+                                <div className="create-step-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                    <div className="step-icon-wrapper" style={{
+                                        width: '80px',
+                                        height: '80px',
+                                        fontSize: '2.5rem',
+                                        margin: '0 auto 1rem',
+                                        background: 'linear-gradient(135deg, #e0f2fe 0%, #ddd6fe 100%)',
+                                        borderRadius: '24px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <span>🚀</span>
+                                    </div>
+                                    <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem', color: '#1e293b' }}>
+                                        Let&apos;s start with the basics
+                                    </h2>
+                                    <p style={{ color: '#64748b', fontSize: '1rem' }}>
+                                        Give your new AI assistant an identity
+                                    </p>
                                 </div>
-                                <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Let&apos;s start with the basics</h2>
-                                <p className="step-subtitle">Give your new AI assistant an identity</p>
-                            </div>
 
-                            <div className="form-group">
-                                <label className="form-label">Project Name <span style={{ color: '#ef4444' }}>*</span></label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="e.g. My Support Bot"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                />
-                            </div>
-                            <div className="form-group" style={{ marginTop: '0.75rem' }}>
-                                <label className="form-label">Description <span className="optional">(Optional)</span></label>
-                                <textarea
-                                    className="form-textarea"
-                                    placeholder="What is this bot for?"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                ></textarea>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 2: Add Data */}
-                    {currentStep === 2 && (
-                        <div className="create-step">
-                            <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
-                                <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
-                                    <span className="step-icon">🧠</span>
-                                </div>
-                                <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Train your AI</h2>
-                                <p className="step-subtitle">Upload documents to teach your bot about your business</p>
-                            </div>
-
-                            <div
-                                className={`upload-area ${isDragOver ? 'drag-over' : ''}`}
-                                onClick={() => fileInputRef.current?.click()}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                                style={{ cursor: 'pointer', padding: '2rem 1.5rem' }}
-                            >
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    multiple
-                                    className="upload-input"
-                                    onChange={handleFileUpload}
-                                    accept=".pdf,.docx,.txt,.csv,.json"
-                                    style={{ display: 'none' }}
-                                />
-                                <div style={{ pointerEvents: 'none' }}>
-                                    <i className="fas fa-cloud-upload-alt upload-icon"></i>
-                                    <h3 className="upload-title">Click or drag files here</h3>
-                                    <p className="upload-subtitle">Support PDF, DOCX, TXT, CSV, JSON</p>
-                                </div>
-                            </div>
-
-                            {uploadedFiles.length > 0 && (
-                                <div className="uploaded-files" style={{ marginTop: '0.75rem' }}>
-                                    {uploadedFiles.map((file, idx) => (
-                                        <div key={idx} className="uploaded-file">
-                                            <i className="far fa-file-alt"></i>
-                                            <span>{file.name} ({file.size})</span>
-                                            <button onClick={() => removeFile(idx)} className="btn-icon"><i className="fas fa-trash"></i></button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <button onClick={() => setShowManualInput(!showManualInput)} className="btn btn-secondary" style={{ marginTop: '1rem', width: '100%' }}>
-                                <i className={`fas ${showManualInput ? 'fa-minus' : 'fa-plus'}`}></i> {showManualInput ? "Hide Manual Input" : "Add Text Manually"}
-                            </button>
-
-                            {showManualInput && (
-                                <div className="form-group" style={{ marginTop: '1rem' }}>
-                                    <textarea
-                                        className="form-textarea large"
-                                        placeholder="Paste your FAQ or documentation text here..."
-                                        value={formData.manualContent}
-                                        onChange={(e) => setFormData({ ...formData, manualContent: e.target.value })}
-                                    ></textarea>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Step 3: Customize */}
-                    {currentStep === 3 && (
-                        <div className="create-step">
-                            <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
-                                <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
-                                    <span className="step-icon">🎨</span>
-                                </div>
-                                <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Make it yours</h2>
-                                <p className="step-subtitle">Customize the look and feel of your widget</p>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
-                                <div>
-                                    {/* Bot Identity */}
-                                    <h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Bot Identity</h4>
-                                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                        <label className="form-label" style={{ fontSize: '0.9rem' }}>Bot Name (Displayed in Header)</label>
+                                <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                                    <div style={{ marginBottom: '1.25rem' }}>
+                                        <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                            Project Name <span style={{ color: '#ef4444' }}>*</span>
+                                        </label>
                                         <input
                                             type="text"
                                             className="form-input"
-                                            placeholder="e.g. Snowky Assistant"
-                                            value={formData.botName}
-                                            onChange={(e) => setFormData({ ...formData, botName: e.target.value })}
+                                            placeholder="e.g. My Support Bot"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            style={{ width: '100%' }}
                                         />
                                     </div>
-                                    <div className="form-group" style={{ marginBottom: '2rem' }}>
-                                        <label className="form-label" style={{ fontSize: '0.9rem' }}>Welcome Message</label>
+
+                                    <div style={{ marginBottom: '0' }}>
+                                        <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                            Description <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
+                                        </label>
                                         <textarea
                                             className="form-textarea"
-                                            rows={3}
-                                            placeholder="e.g. Hello! How can I help you today?"
-                                            value={formData.welcomeMessage}
-                                            onChange={(e) => setFormData({ ...formData, welcomeMessage: e.target.value })}
+                                            placeholder="What is this bot for?"
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            style={{ width: '100%', minHeight: '100px' }}
                                         ></textarea>
                                     </div>
+                                </div>
+                            </div>
+                        )
+                    }
 
-                                    {/* Widget Theme */}
-                                    <h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Widget Theme</h4>
-                                    <div className="tone-grid-create" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                                        {themes.map(theme => (
-                                            <button
-                                                key={theme.id}
-                                                onClick={() => setFormData({ ...formData, theme: theme.id })}
-                                                className={`tone-option ${formData.theme === theme.id ? 'selected' : ''}`}
-                                                title={theme.description}
-                                            >
-                                                <span className="tone-option-emoji">{theme.icon}</span>
-                                                <span className="tone-option-name">{theme.name}</span>
-                                                {formData.theme === theme.id && <div className="tone-option-check"><i className="fas fa-check"></i></div>}
-                                            </button>
+                    {/* Step 2: Add Data */}
+                    {
+                        currentStep === 2 && (
+                            <div className="create-step">
+                                <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
+                                    <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
+                                        <span className="step-icon">🧠</span>
+                                    </div>
+                                    <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Train your AI</h2>
+                                    <p className="step-subtitle">Upload documents to teach your bot about your business</p>
+                                </div>
+
+                                <div
+                                    className={`upload-area ${isDragOver ? 'drag-over' : ''}`}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    style={{ cursor: 'pointer', padding: '2rem 1.5rem' }}
+                                >
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        multiple
+                                        className="upload-input"
+                                        onChange={handleFileUpload}
+                                        accept=".pdf,.docx,.txt,.csv,.json"
+                                        style={{ display: 'none' }}
+                                    />
+                                    <div style={{ pointerEvents: 'none' }}>
+                                        <i className="fas fa-cloud-upload-alt upload-icon"></i>
+                                        <h3 className="upload-title">Click or drag files here</h3>
+                                        <p className="upload-subtitle">Support PDF, DOCX, TXT, CSV, JSON</p>
+                                    </div>
+                                </div>
+
+                                {uploadedFiles.length > 0 && (
+                                    <div className="uploaded-files" style={{ marginTop: '0.75rem' }}>
+                                        {uploadedFiles.map((file, idx) => (
+                                            <div key={idx} className="uploaded-file">
+                                                <i className="far fa-file-alt"></i>
+                                                <span>{file.name} ({file.size})</span>
+                                                <button onClick={() => removeFile(idx)} className="btn-icon"><i className="fas fa-trash"></i></button>
+                                            </div>
                                         ))}
                                     </div>
+                                )}
 
-                                    {/* AI Personality */}
-                                    <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>AI Personality</h4>
-                                    <div className="tone-grid-create" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                                        {tones.map(tone => (
-                                            <button
-                                                key={tone.id}
-                                                onClick={() => setFormData({ ...formData, tone: tone.id })}
-                                                className={`tone-option ${formData.tone === tone.id ? 'selected' : ''}`}
-                                                title={tone.description}
-                                            >
-                                                <span className="tone-option-emoji">{tone.emoji}</span>
-                                                <span className="tone-option-name">{tone.name}</span>
-                                                {formData.tone === tone.id && <div className="tone-option-check"><i className="fas fa-check"></i></div>}
-                                            </button>
-                                        ))}
+                                <button onClick={() => setShowManualInput(!showManualInput)} className="btn btn-secondary" style={{ marginTop: '1rem', width: '100%' }}>
+                                    <i className={`fas ${showManualInput ? 'fa-minus' : 'fa-plus'}`}></i> {showManualInput ? "Hide Manual Input" : "Add Text Manually"}
+                                </button>
+
+                                {showManualInput && (
+                                    <div className="form-group" style={{ marginTop: '1rem' }}>
+                                        <textarea
+                                            className="form-textarea large"
+                                            placeholder="Paste your FAQ or documentation text here..."
+                                            value={formData.manualContent}
+                                            onChange={(e) => setFormData({ ...formData, manualContent: e.target.value })}
+                                        ></textarea>
                                     </div>
+                                )}
+                            </div>
+                        )
+                    }
 
-                                    {/* Emoji Usage */}
-                                    <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Emoji Usage</h4>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>Control how often the AI uses emojis in responses</p>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        {[
-                                            { id: 'none', label: 'None', icon: '🚫', desc: 'No emojis at all' },
-                                            { id: 'minimal', label: 'Minimal', icon: '😐', desc: 'Very few, only when necessary' },
-                                            { id: 'medium', label: 'Medium', icon: '🙂', desc: 'Balanced emoji usage' },
-                                            { id: 'expressive', label: 'Expressive', icon: '😊', desc: 'Frequent emojis' },
-                                            { id: 'maximum', label: 'Maximum', icon: '🎉', desc: 'Lots of emojis!' },
-                                        ].map(opt => (
-                                            <button
-                                                key={opt.id}
-                                                onClick={() => setFormData({ ...formData, emojiUsage: opt.id })}
-                                                title={opt.desc}
-                                                style={{
-                                                    padding: '0.75rem 1rem',
-                                                    borderRadius: '10px',
-                                                    border: formData.emojiUsage === opt.id ? `2px solid ${formData.color}` : '2px solid var(--gray-200)',
-                                                    background: formData.emojiUsage === opt.id ? `${formData.color}15` : 'white',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '0.5rem',
-                                                    transition: 'all 0.2s ease'
-                                                }}
-                                            >
-                                                <span style={{ fontSize: '1.2rem' }}>{opt.icon}</span>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: formData.emojiUsage === opt.id ? '600' : '400' }}>{opt.label}</span>
-                                            </button>
-                                        ))}
+                    {/* Step 3: Customize */}
+                    {
+                        currentStep === 3 && (
+                            <div className="create-step">
+                                <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
+                                    <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
+                                        <span className="step-icon">🎨</span>
                                     </div>
+                                    <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Make it yours</h2>
+                                    <p className="step-subtitle">Customize the look and feel of your widget</p>
+                                </div>
 
-                                    {/* Brand Color */}
-                                    <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Brand Color</h4>
-                                    <div className="color-grid" style={{ marginBottom: '0.75rem' }}>
-                                        {colors.map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => setFormData({ ...formData, color })}
-                                                className={`color-swatch ${formData.color === color ? 'active' : ''}`}
-                                                style={{ background: color }}
-                                            ></button>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>Custom:</label>
-                                        <input
-                                            type="color"
-                                            value={customColor}
-                                            onChange={(e) => {
-                                                setCustomColor(e.target.value);
-                                                setFormData({ ...formData, color: e.target.value });
-                                            }}
-                                            style={{ width: '44px', height: '44px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                                        />
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)', fontFamily: 'monospace' }}>{customColor}</span>
-                                    </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
+                                    {/* Customization Options */}
+                                    <div>
+                                        {/* Bot Identity */}
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Bot Identity</h4>
+                                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                            <label className="form-label" style={{ fontSize: '0.9rem' }}>Bot Name (Displayed in Header)</label>
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="e.g. Snowky Assistant"
+                                                value={formData.botName}
+                                                onChange={(e) => setFormData({ ...formData, botName: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '2rem' }}>
+                                            <label className="form-label" style={{ fontSize: '0.9rem' }}>Welcome Message</label>
+                                            <textarea
+                                                className="form-textarea"
+                                                rows={3}
+                                                placeholder="e.g. Hello! How can I help you today?"
+                                                value={formData.welcomeMessage}
+                                                onChange={(e) => setFormData({ ...formData, welcomeMessage: e.target.value })}
+                                            ></textarea>
+                                        </div>
 
-                                    {/* Launcher Button */}
-                                    <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Launcher Button</h4>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '1rem' }}>Customize the floating chat button</p>
-
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Icon</label>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
-                                            {availableIcons.map(icon => (
+                                        {/* Widget Theme */}
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600 }}>Widget Theme</h4>
+                                        <div className="tone-grid-create" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                                            {themes.map(theme => (
                                                 <button
-                                                    key={icon}
-                                                    onClick={() => setFormData({ ...formData, chatIcon: icon })}
-                                                    style={{
-                                                        padding: '0.75rem',
-                                                        borderRadius: '10px',
-                                                        border: formData.chatIcon === icon ? `2px solid ${formData.launcherColor}` : '2px solid var(--gray-200)',
-                                                        background: formData.chatIcon === icon ? `${formData.launcherColor}15` : 'white',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s ease'
-                                                    }}
+                                                    key={theme.id}
+                                                    onClick={() => setFormData({ ...formData, theme: theme.id })}
+                                                    className={`tone-option ${formData.theme === theme.id ? 'selected' : ''}`}
+                                                    title={theme.description}
                                                 >
-                                                    <i className={icon} style={{ fontSize: '1.25rem', color: formData.chatIcon === icon ? formData.launcherColor : 'var(--gray-500)' }}></i>
+                                                    <span className="tone-option-emoji">{theme.icon}</span>
+                                                    <span className="tone-option-name">{theme.name}</span>
+                                                    {formData.theme === theme.id && <div className="tone-option-check"><i className="fas fa-check"></i></div>}
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>
 
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Color</label>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                            {colors.map(c => (
+                                        {/* AI Personality */}
+                                        <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>AI Personality</h4>
+                                        <div className="tone-grid-create" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                                            {tones.map(tone => (
                                                 <button
-                                                    key={c}
-                                                    onClick={() => setFormData({ ...formData, launcherColor: c })}
-                                                    style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '50%',
-                                                        background: c,
-                                                        border: formData.launcherColor === c ? '3px solid #000' : '2px solid transparent',
-                                                        cursor: 'pointer',
-                                                        transition: 'transform 0.2s',
-                                                        transform: formData.launcherColor === c ? 'scale(1.1)' : 'scale(1)'
-                                                    }}
-                                                ></button>
+                                                    key={tone.id}
+                                                    onClick={() => setFormData({ ...formData, tone: tone.id })}
+                                                    className={`tone-option ${formData.tone === tone.id ? 'selected' : ''}`}
+                                                    title={tone.description}
+                                                >
+                                                    <span className="tone-option-emoji">{tone.emoji}</span>
+                                                    <span className="tone-option-name">{tone.name}</span>
+                                                    {formData.tone === tone.id && <div className="tone-option-check"><i className="fas fa-check"></i></div>}
+                                                </button>
                                             ))}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
-                                            <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>Custom:</label>
-                                            <input
-                                                type="color"
-                                                value={formData.launcherColor}
-                                                onChange={(e) => setFormData({ ...formData, launcherColor: e.target.value })}
-                                                style={{ width: '44px', height: '44px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                                            />
-                                            <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)', fontFamily: 'monospace' }}>{formData.launcherColor}</span>
-                                        </div>
-                                    </div>
 
-                                    <div style={{ marginBottom: '1rem' }}>
-                                        <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Shape</label>
+                                        {/* Emoji Usage */}
+                                        <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Emoji Usage</h4>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '0.75rem' }}>Control how often the AI uses emojis in responses</p>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             {[
-                                                { id: 'circle', label: '●', style: { borderRadius: '50%' } },
-                                                { id: 'rounded', label: '■', style: { borderRadius: '12px' } },
-                                                { id: 'square', label: '◼', style: { borderRadius: '0' } },
-                                                { id: 'pill', label: '⬭', style: { borderRadius: '24px 24px 6px 24px' } },
-                                                { id: 'leaf', label: '🍃', style: { borderRadius: '50% 50% 10% 50%' } },
-                                            ].map(shape => (
+                                                { id: 'none', label: 'None', icon: '🚫', desc: 'No emojis at all' },
+                                                { id: 'minimal', label: 'Minimal', icon: '😐', desc: 'Very few, only when necessary' },
+                                                { id: 'medium', label: 'Medium', icon: '🙂', desc: 'Balanced emoji usage' },
+                                                { id: 'expressive', label: 'Expressive', icon: '😊', desc: 'Frequent emojis' },
+                                                { id: 'maximum', label: 'Maximum', icon: '🎉', desc: 'Lots of emojis!' },
+                                            ].map(opt => (
                                                 <button
-                                                    key={shape.id}
-                                                    onClick={() => setFormData({ ...formData, launcherShape: shape.id })}
+                                                    key={opt.id}
+                                                    onClick={() => setFormData({ ...formData, emojiUsage: opt.id })}
+                                                    title={opt.desc}
                                                     style={{
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        ...shape.style,
-                                                        background: formData.launcherShape === shape.id ? formData.launcherColor : 'var(--gray-200)',
-                                                        border: formData.launcherShape === shape.id ? '2px solid #000' : '2px solid transparent',
+                                                        padding: '0.75rem 1rem',
+                                                        borderRadius: '10px',
+                                                        border: formData.emojiUsage === opt.id ? `2px solid ${formData.color}` : '2px solid var(--gray-200)',
+                                                        background: formData.emojiUsage === opt.id ? `${formData.color}15` : 'white',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '1rem',
-                                                        color: formData.launcherShape === shape.id ? 'white' : 'var(--gray-500)',
+                                                        gap: '0.5rem',
                                                         transition: 'all 0.2s ease'
                                                     }}
                                                 >
-                                                    {shape.id === 'leaf' ? '🍃' : <i className="fas fa-comment-dots" style={{ fontSize: '0.9rem' }}></i>}
+                                                    <span style={{ fontSize: '1.2rem' }}>{opt.icon}</span>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: formData.emojiUsage === opt.id ? '600' : '400' }}>{opt.label}</span>
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>
-                                </div>
 
-                                {/* Live Preview */}
-                                <div className="widget-preview-container" style={{ position: 'sticky', top: '2rem' }}>
-                                    <h4 style={{ marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>Live Preview</h4>
-                                    <div className="widget-preview-bg" style={{ minHeight: '320px' }}>
-                                        <div className="widget-preview-chat" style={getThemeStyles()}>
-                                            <div className="preview-chat-header" style={{
-                                                background: formData.theme === 'glassmorphism'
-                                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2))'
-                                                    : formData.theme === 'neon'
-                                                        ? 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)'
-                                                        : formData.theme === 'retro'
-                                                            ? '#000'
-                                                            : formData.theme === 'nature'
-                                                                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                                                                : formData.theme === 'bubble'
-                                                                    ? `linear-gradient(135deg, ${formData.color} 0%, ${formData.color}dd 100%)`
-                                                                    : formData.theme === 'minimal'
-                                                                        ? '#f8fafc'
-                                                                        : formData.theme === 'classic'
-                                                                            ? `linear-gradient(180deg, ${formData.color} 0%, ${formData.color}ee 100%)`
-                                                                            : `linear-gradient(135deg, ${formData.color} 0%, ${formData.color}cc 100%)`,
-                                                borderRadius: formData.theme === 'retro' ? '0'
-                                                    : formData.theme === 'glassmorphism' ? '24px 24px 0 0'
-                                                        : formData.theme === 'bubble' ? '28px 28px 0 0'
-                                                            : formData.theme === 'minimal' ? '16px 16px 0 0'
-                                                                : formData.theme === 'modern' ? '20px 20px 0 0'
-                                                                    : formData.theme === 'nature' ? '24px 24px 0 0'
-                                                                        : undefined,
-                                                backdropFilter: formData.theme === 'glassmorphism' ? 'blur(10px)' : undefined,
-                                                borderBottom: formData.theme === 'minimal' ? '1px solid #e2e8f0'
-                                                    : formData.theme === 'retro' ? '4px solid #fef08a'
-                                                        : formData.theme === 'neon' ? `1px solid ${formData.color}50`
-                                                            : undefined,
-                                                padding: '16px'
-                                            }}>
-                                                <div className="preview-chat-avatar" style={{
-                                                    background: formData.theme === 'neon' ? '#0f0f1a'
-                                                        : formData.theme === 'retro' ? '#fef08a'
-                                                            : formData.theme === 'minimal' ? formData.color
-                                                                : 'rgba(255,255,255,0.2)',
-                                                    border: formData.theme === 'retro' ? '2px solid #000'
-                                                        : formData.theme === 'neon' ? `2px solid ${formData.color}`
-                                                            : 'none',
-                                                    borderRadius: formData.theme === 'retro' ? '0' : '50%'
-                                                }}>🐻‍❄️</div>
-                                                <div>
-                                                    <div className="preview-chat-name" style={{
-                                                        color: formData.theme === 'neon' ? formData.color
-                                                            : formData.theme === 'minimal' ? '#1e293b'
-                                                                : formData.theme === 'retro' ? '#fef08a'
-                                                                    : 'white',
-                                                        fontWeight: formData.theme === 'retro' ? '900' : '600',
-                                                        textShadow: formData.theme === 'neon' ? `0 0 10px ${formData.color}` : undefined,
-                                                        fontFamily: formData.theme === 'retro' ? 'monospace' : undefined
-                                                    }}>
-                                                        {formData.botName || 'Snowky Assistant'}
-                                                    </div>
-                                                    <div className="preview-chat-status" style={{
-                                                        color: formData.theme === 'neon' ? '#4ade80'
-                                                            : formData.theme === 'minimal' ? '#10b981'
-                                                                : formData.theme === 'retro' ? '#4ade80'
-                                                                    : 'rgba(255,255,255,0.8)'
-                                                    }}>● Online</div>
-                                                </div>
-                                            </div>
-                                            <div className="preview-chat-body" style={{
-                                                background: formData.theme === 'glassmorphism'
-                                                    ? 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)'
-                                                    : formData.theme === 'neon' ? 'linear-gradient(180deg, #0a0a0f 0%, #0f0f1a 100%)'
-                                                        : formData.theme === 'retro' ? '#fef08a'
-                                                            : formData.theme === 'nature' ? 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%)'
-                                                                : formData.theme === 'bubble' ? 'linear-gradient(180deg, #fff5f5 0%, #ffffff 100%)'
-                                                                    : formData.theme === 'minimal' ? '#ffffff'
-                                                                        : formData.theme === 'classic' ? '#f9fafb'
-                                                                            : '#ffffff',
-                                                backdropFilter: formData.theme === 'glassmorphism' ? 'blur(8px)' : undefined,
-                                                minHeight: '120px',
-                                                padding: '16px'
-                                            }}>
-                                                <div className="preview-chat-message" style={{
-                                                    background: formData.theme === 'glassmorphism'
-                                                        ? 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.15))'
-                                                        : formData.theme === 'neon' ? 'linear-gradient(135deg, #1a1a2e, #252545)'
-                                                            : formData.theme === 'retro' ? '#fff'
-                                                                : formData.theme === 'nature' ? '#ffffff'
-                                                                    : formData.theme === 'bubble' ? `linear-gradient(135deg, ${formData.color}15, ${formData.color}08)`
-                                                                        : formData.theme === 'minimal' ? '#f1f5f9'
-                                                                            : formData.theme === 'classic' ? '#e5e7eb'
-                                                                                : `linear-gradient(135deg, ${formData.color}10, ${formData.color}05)`,
-                                                    color: formData.theme === 'neon' ? '#e0e0e0'
-                                                        : formData.theme === 'glassmorphism' ? '#1e293b'
-                                                            : '#374151',
-                                                    borderRadius: formData.theme === 'bubble' ? '20px 20px 20px 4px'
-                                                        : formData.theme === 'retro' ? '0'
-                                                            : formData.theme === 'glassmorphism' ? '16px'
-                                                                : formData.theme === 'nature' ? '16px 16px 16px 4px'
-                                                                    : formData.theme === 'minimal' ? '12px'
-                                                                        : formData.theme === 'modern' ? '16px 16px 16px 4px'
-                                                                            : '8px',
-                                                    backdropFilter: formData.theme === 'glassmorphism' ? 'blur(6px)' : undefined,
-                                                    border: formData.theme === 'glassmorphism' ? '1px solid rgba(255,255,255,0.3)'
-                                                        : formData.theme === 'retro' ? '3px solid #000'
-                                                            : formData.theme === 'neon' ? `1px solid ${formData.color}30`
-                                                                : formData.theme === 'nature' ? '1px solid #86efac'
-                                                                    : formData.theme === 'bubble' ? `2px solid ${formData.color}20`
-                                                                        : 'none',
-                                                    boxShadow: formData.theme === 'glassmorphism' ? '0 4px 12px rgba(0,0,0,0.08)'
-                                                        : formData.theme === 'retro' ? '4px 4px 0 #000'
-                                                            : formData.theme === 'bubble' ? '0 4px 15px rgba(0,0,0,0.08)'
-                                                                : formData.theme === 'neon' ? `0 0 15px ${formData.color}20`
-                                                                    : undefined,
-                                                    padding: '12px 16px',
-                                                    fontSize: '14px',
-                                                    fontFamily: formData.theme === 'retro' ? 'monospace' : undefined,
-                                                    maxWidth: '85%'
-                                                }}>
-                                                    {formData.welcomeMessage || getPreviewWelcomeMessage()}
-                                                </div>
-                                            </div>
-                                            <div className="preview-chat-input" style={{
-                                                background: formData.theme === 'glassmorphism'
-                                                    ? 'linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.1))'
-                                                    : formData.theme === 'neon' ? '#16213e'
-                                                        : formData.theme === 'retro' ? '#000'
-                                                            : formData.theme === 'nature' ? '#d1fae5'
-                                                                : formData.theme === 'bubble' ? '#fff5f5'
-                                                                    : formData.theme === 'minimal' ? '#f8fafc'
-                                                                        : '#f9fafb',
-                                                backdropFilter: formData.theme === 'glassmorphism' ? 'blur(8px)' : undefined,
-                                                borderRadius: formData.theme === 'glassmorphism' ? '0 0 24px 24px'
-                                                    : formData.theme === 'bubble' ? '0 0 28px 8px'
-                                                        : formData.theme === 'modern' ? '0 0 20px 20px'
-                                                            : formData.theme === 'nature' ? '0 0 24px 4px'
-                                                                : formData.theme === 'minimal' ? '0 0 16px 16px'
-                                                                    : undefined,
-                                                borderTop: formData.theme === 'minimal' ? '1px solid #e2e8f0'
-                                                    : formData.theme === 'neon' ? `1px solid ${formData.color}30`
-                                                        : formData.theme === 'nature' ? '1px solid #86efac'
-                                                            : undefined,
-                                                padding: '12px'
-                                            }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Type a message..."
-                                                    style={{
-                                                        background: formData.theme === 'neon' ? '#0f0f1a'
-                                                            : formData.theme === 'retro' ? '#fef08a'
-                                                                : formData.theme === 'glassmorphism' ? 'rgba(255,255,255,0.2)'
-                                                                    : formData.theme === 'nature' ? '#ffffff'
-                                                                        : formData.theme === 'bubble' ? '#ffffff'
-                                                                            : '#ffffff',
-                                                        color: formData.theme === 'neon' ? '#e0e0e0' : '#374151',
-                                                        border: formData.theme === 'retro' ? '3px solid #000'
-                                                            : formData.theme === 'neon' ? `1px solid ${formData.color}50`
-                                                                : formData.theme === 'glassmorphism' ? '1px solid rgba(255,255,255,0.3)'
-                                                                    : '1px solid #e5e7eb',
-                                                        borderRadius: formData.theme === 'retro' ? '0'
-                                                            : formData.theme === 'bubble' ? '20px'
-                                                                : '12px',
-                                                        fontFamily: formData.theme === 'retro' ? 'monospace' : undefined
-                                                    }}
-                                                />
-                                                <button style={{
-                                                    background: formData.theme === 'retro' ? '#000'
-                                                        : formData.theme === 'neon' ? formData.color
-                                                            : `linear-gradient(135deg, ${formData.color}, ${formData.color}dd)`,
-                                                    borderRadius: formData.theme === 'retro' ? '0'
-                                                        : formData.theme === 'bubble' ? '50%'
-                                                            : '10px',
-                                                    border: formData.theme === 'retro' ? '2px solid #fef08a' : 'none',
-                                                    boxShadow: formData.theme === 'neon' ? `0 0 15px ${formData.color}50`
-                                                        : formData.theme === 'bubble' ? '0 4px 12px rgba(0,0,0,0.15)'
-                                                            : undefined
-                                                }}><i className="fas fa-paper-plane"></i></button>
+                                        {/* Brand Color */}
+                                        <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Brand Color</h4>
+                                        <div className="color-grid" style={{ marginBottom: '0.75rem' }}>
+                                            {colors.map(color => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => setFormData({ ...formData, color })}
+                                                    className={`color-swatch ${formData.color === color ? 'active' : ''}`}
+                                                    style={{ background: color }}
+                                                ></button>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>Custom:</label>
+                                            <input
+                                                type="color"
+                                                value={customColor}
+                                                onChange={(e) => {
+                                                    setCustomColor(e.target.value);
+                                                    setFormData({ ...formData, color: e.target.value });
+                                                }}
+                                                style={{ width: '44px', height: '44px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                                            />
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)', fontFamily: 'monospace' }}>{customColor}</span>
+                                        </div>
+
+                                        {/* Launcher Button */}
+                                        <h4 style={{ marginBottom: '1rem', marginTop: '1.5rem', fontWeight: 600 }}>Launcher Button</h4>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--gray-500)', marginBottom: '1rem' }}>Customize the floating chat button</p>
+
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Icon</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                                                {availableIcons.map(icon => (
+                                                    <button
+                                                        key={icon}
+                                                        onClick={() => setFormData({ ...formData, chatIcon: icon })}
+                                                        style={{
+                                                            padding: '0.75rem',
+                                                            borderRadius: '10px',
+                                                            border: formData.chatIcon === icon ? `2px solid ${formData.launcherColor}` : '2px solid var(--gray-200)',
+                                                            background: formData.chatIcon === icon ? `${formData.launcherColor}15` : 'white',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        <i className={icon} style={{ fontSize: '1.25rem', color: formData.chatIcon === icon ? formData.launcherColor : 'var(--gray-500)' }}></i>
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                        <button className="preview-chat-button" style={{
-                                            // Theme-specific backgrounds - always uses launcherColor
-                                            background: formData.theme === 'neon'
-                                                ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}aa)`
-                                                : formData.theme === 'glassmorphism'
-                                                    ? `linear-gradient(135deg, ${formData.launcherColor}dd, ${formData.launcherColor}99)`
-                                                    : formData.theme === 'nature'
-                                                        ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}cc)`
-                                                        : formData.theme === 'modern'
-                                                            ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}cc)`
-                                                            : formData.theme === 'bubble'
-                                                                ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}bb)`
-                                                                : formData.launcherColor,
-                                            // Theme-specific shadows
-                                            boxShadow: formData.theme === 'neon'
-                                                ? `0 0 30px ${formData.launcherColor}, 0 0 60px ${formData.launcherColor}50, inset 0 0 20px rgba(255,255,255,0.1)`
-                                                : formData.theme === 'bubble'
-                                                    ? '0 15px 35px rgba(0,0,0,0.25), 0 5px 15px rgba(0,0,0,0.1)'
-                                                    : formData.theme === 'glassmorphism'
-                                                        ? '0 8px 32px rgba(31, 38, 135, 0.3), inset 0 0 20px rgba(255,255,255,0.2)'
-                                                        : formData.theme === 'modern'
-                                                            ? `0 10px 30px ${formData.launcherColor}40, 0 4px 10px rgba(0,0,0,0.1)`
+
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Color</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                {colors.map(c => (
+                                                    <button
+                                                        key={c}
+                                                        onClick={() => setFormData({ ...formData, launcherColor: c })}
+                                                        style={{
+                                                            width: '36px',
+                                                            height: '36px',
+                                                            borderRadius: '50%',
+                                                            background: c,
+                                                            border: formData.launcherColor === c ? '3px solid #000' : '2px solid transparent',
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            transform: formData.launcherColor === c ? 'scale(1.1)' : 'scale(1)'
+                                                        }}
+                                                    ></button>
+                                                ))}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem' }}>
+                                                <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>Custom:</label>
+                                                <input
+                                                    type="color"
+                                                    value={formData.launcherColor}
+                                                    onChange={(e) => setFormData({ ...formData, launcherColor: e.target.value })}
+                                                    style={{ width: '44px', height: '44px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--gray-500)', fontFamily: 'monospace' }}>{formData.launcherColor}</span>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '0.75rem', display: 'block' }}>Button Shape</label>
+                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                {[
+                                                    { id: 'circle', label: '●', style: { borderRadius: '50%' } },
+                                                    { id: 'rounded', label: '■', style: { borderRadius: '12px' } },
+                                                    { id: 'square', label: '◼', style: { borderRadius: '0' } },
+                                                    { id: 'pill', label: '⬭', style: { borderRadius: '24px 24px 6px 24px' } },
+                                                    { id: 'leaf', label: '🍃', style: { borderRadius: '50% 50% 10% 50%' } },
+                                                ].map(shape => (
+                                                    <button
+                                                        key={shape.id}
+                                                        onClick={() => setFormData({ ...formData, launcherShape: shape.id })}
+                                                        style={{
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            ...shape.style,
+                                                            background: formData.launcherShape === shape.id ? formData.launcherColor : 'var(--gray-200)',
+                                                            border: formData.launcherShape === shape.id ? '2px solid #000' : '2px solid transparent',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '1rem',
+                                                            color: formData.launcherShape === shape.id ? 'white' : 'var(--gray-500)',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        {shape.id === 'leaf' ? '🍃' : <i className="fas fa-comment-dots" style={{ fontSize: '0.9rem' }}></i>}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Live Preview - Fixed */}
+                                    <div className="widget-preview-container" style={{
+                                        position: 'fixed',
+                                        top: '80px',
+                                        right: '40px',
+                                        width: '380px'
+                                    }}>
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600, textAlign: 'center' }}>Live Preview</h4>
+                                        <div className="widget-preview-bg" style={{ minHeight: '320px' }}>
+                                            <div className="widget-preview-chat" style={getThemeStyles()}>
+                                                <div className="preview-chat-header" style={{
+                                                    background: formData.theme === 'glassmorphism'
+                                                        ? 'linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2))'
+                                                        : formData.theme === 'neon'
+                                                            ? 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)'
                                                             : formData.theme === 'retro'
-                                                                ? '6px 6px 0 #000'
-                                                                : '0 8px 25px rgba(0,0,0,0.2)',
-                                            // User-selected shape (overrides theme default)
-                                            borderRadius: formData.launcherShape === 'circle'
-                                                ? '50%'
-                                                : formData.launcherShape === 'rounded'
-                                                    ? '12px'
-                                                    : formData.launcherShape === 'square'
-                                                        ? '0'
-                                                        : formData.launcherShape === 'pill'
-                                                            ? '24px 24px 6px 24px'
-                                                            : formData.launcherShape === 'leaf'
-                                                                ? '50% 50% 10% 50%'
-                                                                : '50%',
-                                            // Theme-specific borders
-                                            border: formData.theme === 'retro'
-                                                ? '3px solid #000'
-                                                : formData.theme === 'glassmorphism'
-                                                    ? '1px solid rgba(255,255,255,0.4)'
+                                                                ? '#000'
+                                                                : formData.theme === 'nature'
+                                                                    ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+                                                                    : formData.theme === 'bubble'
+                                                                        ? `linear-gradient(135deg, ${formData.color} 0%, ${formData.color}dd 100%)`
+                                                                        : formData.theme === 'minimal'
+                                                                            ? '#f8fafc'
+                                                                            : formData.theme === 'classic'
+                                                                                ? `linear-gradient(180deg, ${formData.color} 0%, ${formData.color}ee 100%)`
+                                                                                : `linear-gradient(135deg, ${formData.color} 0%, ${formData.color}cc 100%)`,
+                                                    borderRadius: formData.theme === 'retro' ? '0'
+                                                        : formData.theme === 'glassmorphism' ? '24px 24px 0 0'
+                                                            : formData.theme === 'bubble' ? '28px 28px 0 0'
+                                                                : formData.theme === 'minimal' ? '16px 16px 0 0'
+                                                                    : formData.theme === 'modern' ? '20px 20px 0 0'
+                                                                        : formData.theme === 'nature' ? '24px 24px 0 0'
+                                                                            : undefined,
+                                                    backdropFilter: formData.theme === 'glassmorphism' ? 'blur(10px)' : undefined,
+                                                    borderBottom: formData.theme === 'minimal' ? '1px solid #e2e8f0'
+                                                        : formData.theme === 'retro' ? '4px solid #fef08a'
+                                                            : formData.theme === 'neon' ? `1px solid ${formData.color}50`
+                                                                : undefined,
+                                                    padding: '16px'
+                                                }}>
+                                                    <div className="preview-chat-avatar" style={{
+                                                        background: formData.theme === 'neon' ? '#0f0f1a'
+                                                            : formData.theme === 'retro' ? '#fef08a'
+                                                                : formData.theme === 'minimal' ? formData.color
+                                                                    : 'rgba(255,255,255,0.2)',
+                                                        border: formData.theme === 'retro' ? '2px solid #000'
+                                                            : formData.theme === 'neon' ? `2px solid ${formData.color}`
+                                                                : 'none',
+                                                        borderRadius: formData.theme === 'retro' ? '0' : '50%'
+                                                    }}>🐻‍❄️</div>
+                                                    <div>
+                                                        <div className="preview-chat-name" style={{
+                                                            color: formData.theme === 'neon' ? formData.color
+                                                                : formData.theme === 'minimal' ? '#1e293b'
+                                                                    : formData.theme === 'retro' ? '#fef08a'
+                                                                        : 'white',
+                                                            fontWeight: formData.theme === 'retro' ? '900' : '600',
+                                                            textShadow: formData.theme === 'neon' ? `0 0 10px ${formData.color}` : undefined,
+                                                            fontFamily: formData.theme === 'retro' ? 'monospace' : undefined
+                                                        }}>
+                                                            {formData.botName || 'Snowky Assistant'}
+                                                        </div>
+                                                        <div className="preview-chat-status" style={{
+                                                            color: formData.theme === 'neon' ? '#4ade80'
+                                                                : formData.theme === 'minimal' ? '#10b981'
+                                                                    : formData.theme === 'retro' ? '#4ade80'
+                                                                        : 'rgba(255,255,255,0.8)'
+                                                        }}>● Online</div>
+                                                    </div>
+                                                </div>
+                                                <div className="preview-chat-body" style={{
+                                                    background: formData.theme === 'glassmorphism'
+                                                        ? 'linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)'
+                                                        : formData.theme === 'neon' ? 'linear-gradient(180deg, #0a0a0f 0%, #0f0f1a 100%)'
+                                                            : formData.theme === 'retro' ? '#fef08a'
+                                                                : formData.theme === 'nature' ? 'linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%)'
+                                                                    : formData.theme === 'bubble' ? 'linear-gradient(180deg, #fff5f5 0%, #ffffff 100%)'
+                                                                        : formData.theme === 'minimal' ? '#ffffff'
+                                                                            : formData.theme === 'classic' ? '#f9fafb'
+                                                                                : '#ffffff',
+                                                    backdropFilter: formData.theme === 'glassmorphism' ? 'blur(8px)' : undefined,
+                                                    minHeight: '120px',
+                                                    padding: '16px'
+                                                }}>
+                                                    <div className="preview-chat-message" style={{
+                                                        background: formData.theme === 'glassmorphism'
+                                                            ? 'linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.15))'
+                                                            : formData.theme === 'neon' ? 'linear-gradient(135deg, #1a1a2e, #252545)'
+                                                                : formData.theme === 'retro' ? '#fff'
+                                                                    : formData.theme === 'nature' ? '#ffffff'
+                                                                        : formData.theme === 'bubble' ? `linear-gradient(135deg, ${formData.color}15, ${formData.color}08)`
+                                                                            : formData.theme === 'minimal' ? '#f1f5f9'
+                                                                                : formData.theme === 'classic' ? '#e5e7eb'
+                                                                                    : `linear-gradient(135deg, ${formData.color}10, ${formData.color}05)`,
+                                                        color: formData.theme === 'neon' ? '#e0e0e0'
+                                                            : formData.theme === 'glassmorphism' ? '#1e293b'
+                                                                : '#374151',
+                                                        borderRadius: formData.theme === 'bubble' ? '20px 20px 20px 4px'
+                                                            : formData.theme === 'retro' ? '0'
+                                                                : formData.theme === 'glassmorphism' ? '16px'
+                                                                    : formData.theme === 'nature' ? '16px 16px 16px 4px'
+                                                                        : formData.theme === 'minimal' ? '12px'
+                                                                            : formData.theme === 'modern' ? '16px 16px 16px 4px'
+                                                                                : '8px',
+                                                        backdropFilter: formData.theme === 'glassmorphism' ? 'blur(6px)' : undefined,
+                                                        border: formData.theme === 'glassmorphism' ? '1px solid rgba(255,255,255,0.3)'
+                                                            : formData.theme === 'retro' ? '3px solid #000'
+                                                                : formData.theme === 'neon' ? `1px solid ${formData.color}30`
+                                                                    : formData.theme === 'nature' ? '1px solid #86efac'
+                                                                        : formData.theme === 'bubble' ? `2px solid ${formData.color}20`
+                                                                            : 'none',
+                                                        boxShadow: formData.theme === 'glassmorphism' ? '0 4px 12px rgba(0,0,0,0.08)'
+                                                            : formData.theme === 'retro' ? '4px 4px 0 #000'
+                                                                : formData.theme === 'bubble' ? '0 4px 15px rgba(0,0,0,0.08)'
+                                                                    : formData.theme === 'neon' ? `0 0 15px ${formData.color}20`
+                                                                        : undefined,
+                                                        padding: '12px 16px',
+                                                        fontSize: '14px',
+                                                        fontFamily: formData.theme === 'retro' ? 'monospace' : undefined,
+                                                        maxWidth: '85%'
+                                                    }}>
+                                                        {formData.welcomeMessage || getPreviewWelcomeMessage()}
+                                                    </div>
+                                                </div>
+                                                <div className="preview-chat-input" style={{
+                                                    background: formData.theme === 'glassmorphism'
+                                                        ? 'linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.1))'
+                                                        : formData.theme === 'neon' ? '#16213e'
+                                                            : formData.theme === 'retro' ? '#000'
+                                                                : formData.theme === 'nature' ? '#d1fae5'
+                                                                    : formData.theme === 'bubble' ? '#fff5f5'
+                                                                        : formData.theme === 'minimal' ? '#f8fafc'
+                                                                            : '#f9fafb',
+                                                    backdropFilter: formData.theme === 'glassmorphism' ? 'blur(8px)' : undefined,
+                                                    borderRadius: formData.theme === 'glassmorphism' ? '0 0 24px 24px'
+                                                        : formData.theme === 'bubble' ? '0 0 28px 8px'
+                                                            : formData.theme === 'modern' ? '0 0 20px 20px'
+                                                                : formData.theme === 'nature' ? '0 0 24px 4px'
+                                                                    : formData.theme === 'minimal' ? '0 0 16px 16px'
+                                                                        : undefined,
+                                                    borderTop: formData.theme === 'minimal' ? '1px solid #e2e8f0'
+                                                        : formData.theme === 'neon' ? `1px solid ${formData.color}30`
+                                                            : formData.theme === 'nature' ? '1px solid #86efac'
+                                                                : undefined,
+                                                    padding: '12px'
+                                                }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Type a message..."
+                                                        style={{
+                                                            background: formData.theme === 'neon' ? '#0f0f1a'
+                                                                : formData.theme === 'retro' ? '#fef08a'
+                                                                    : formData.theme === 'glassmorphism' ? 'rgba(255,255,255,0.2)'
+                                                                        : formData.theme === 'nature' ? '#ffffff'
+                                                                            : formData.theme === 'bubble' ? '#ffffff'
+                                                                                : '#ffffff',
+                                                            color: formData.theme === 'neon' ? '#e0e0e0' : '#374151',
+                                                            border: formData.theme === 'retro' ? '3px solid #000'
+                                                                : formData.theme === 'neon' ? `1px solid ${formData.color}50`
+                                                                    : formData.theme === 'glassmorphism' ? '1px solid rgba(255,255,255,0.3)'
+                                                                        : '1px solid #e5e7eb',
+                                                            borderRadius: formData.theme === 'retro' ? '0'
+                                                                : formData.theme === 'bubble' ? '20px'
+                                                                    : '12px',
+                                                            fontFamily: formData.theme === 'retro' ? 'monospace' : undefined
+                                                        }}
+                                                    />
+                                                    <button style={{
+                                                        background: formData.theme === 'retro' ? '#000'
+                                                            : formData.theme === 'neon' ? formData.color
+                                                                : `linear-gradient(135deg, ${formData.color}, ${formData.color}dd)`,
+                                                        borderRadius: formData.theme === 'retro' ? '0'
+                                                            : formData.theme === 'bubble' ? '50%'
+                                                                : '10px',
+                                                        border: formData.theme === 'retro' ? '2px solid #fef08a' : 'none',
+                                                        boxShadow: formData.theme === 'neon' ? `0 0 15px ${formData.color}50`
+                                                            : formData.theme === 'bubble' ? '0 4px 12px rgba(0,0,0,0.15)'
+                                                                : undefined
+                                                    }}><i className="fas fa-paper-plane"></i></button>
+                                                </div>
+                                            </div>
+                                            <button className="preview-chat-button" style={{
+                                                // Theme-specific backgrounds - always uses launcherColor
+                                                background: formData.theme === 'neon'
+                                                    ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}aa)`
+                                                    : formData.theme === 'glassmorphism'
+                                                        ? `linear-gradient(135deg, ${formData.launcherColor}dd, ${formData.launcherColor}99)`
+                                                        : formData.theme === 'nature'
+                                                            ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}cc)`
+                                                            : formData.theme === 'modern'
+                                                                ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}cc)`
+                                                                : formData.theme === 'bubble'
+                                                                    ? `linear-gradient(135deg, ${formData.launcherColor}, ${formData.launcherColor}bb)`
+                                                                    : formData.launcherColor,
+                                                // Theme-specific shadows
+                                                boxShadow: formData.theme === 'neon'
+                                                    ? `0 0 30px ${formData.launcherColor}, 0 0 60px ${formData.launcherColor}50, inset 0 0 20px rgba(255,255,255,0.1)`
+                                                    : formData.theme === 'bubble'
+                                                        ? '0 15px 35px rgba(0,0,0,0.25), 0 5px 15px rgba(0,0,0,0.1)'
+                                                        : formData.theme === 'glassmorphism'
+                                                            ? '0 8px 32px rgba(31, 38, 135, 0.3), inset 0 0 20px rgba(255,255,255,0.2)'
+                                                            : formData.theme === 'modern'
+                                                                ? `0 10px 30px ${formData.launcherColor}40, 0 4px 10px rgba(0,0,0,0.1)`
+                                                                : formData.theme === 'retro'
+                                                                    ? '6px 6px 0 #000'
+                                                                    : '0 8px 25px rgba(0,0,0,0.2)',
+                                                // User-selected shape (overrides theme default)
+                                                borderRadius: formData.launcherShape === 'circle'
+                                                    ? '50%'
+                                                    : formData.launcherShape === 'rounded'
+                                                        ? '12px'
+                                                        : formData.launcherShape === 'square'
+                                                            ? '0'
+                                                            : formData.launcherShape === 'pill'
+                                                                ? '24px 24px 6px 24px'
+                                                                : formData.launcherShape === 'leaf'
+                                                                    ? '50% 50% 10% 50%'
+                                                                    : '50%',
+                                                // Theme-specific borders
+                                                border: formData.theme === 'retro'
+                                                    ? '3px solid #000'
+                                                    : formData.theme === 'glassmorphism'
+                                                        ? '1px solid rgba(255,255,255,0.4)'
+                                                        : formData.theme === 'neon'
+                                                            ? `2px solid ${formData.launcherColor}`
+                                                            : 'none',
+                                                // Theme-specific backdrop filter
+                                                backdropFilter: formData.theme === 'glassmorphism' ? 'blur(10px)' : undefined,
+                                                // Theme-specific animations
+                                                animation: formData.theme === 'bubble'
+                                                    ? 'float 4s ease-in-out infinite'
                                                     : formData.theme === 'neon'
-                                                        ? `2px solid ${formData.launcherColor}`
-                                                        : 'none',
-                                            // Theme-specific backdrop filter
-                                            backdropFilter: formData.theme === 'glassmorphism' ? 'blur(10px)' : undefined,
-                                            // Theme-specific animations
-                                            animation: formData.theme === 'bubble'
-                                                ? 'float 4s ease-in-out infinite'
-                                                : formData.theme === 'neon'
-                                                    ? 'pulse-glow 2s ease-in-out infinite'
-                                                    : formData.theme === 'nature'
-                                                        ? 'float 5s ease-in-out infinite'
-                                                        : undefined,
-                                            // Transform for retro theme
-                                            transform: formData.theme === 'retro' ? 'translate(-3px, -3px)' : undefined,
-                                            // Transition for smooth hover
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                        }}>
-                                            <i className={formData.chatIcon} style={{
-                                                fontSize: '1.3rem',
-                                                filter: formData.theme === 'neon' ? 'drop-shadow(0 0 8px currentColor)' : undefined
-                                            }}></i>
-                                        </button>
+                                                        ? 'pulse-glow 2s ease-in-out infinite'
+                                                        : formData.theme === 'nature'
+                                                            ? 'float 5s ease-in-out infinite'
+                                                            : undefined,
+                                                // Transform for retro theme
+                                                transform: formData.theme === 'retro' ? 'translate(-3px, -3px)' : undefined,
+                                                // Transition for smooth hover
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                            }}>
+                                                <i className={formData.chatIcon} style={{
+                                                    fontSize: '1.3rem',
+                                                    filter: formData.theme === 'neon' ? 'drop-shadow(0 0 8px currentColor)' : undefined
+                                                }}></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     {/* Step 4: Get Code */}
-                    {currentStep === 4 && (
-                        <div className="create-step">
-                            <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
-                                <div className="step-icon-wrapper success" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
-                                    <span className="step-icon">✓</span>
+                    {
+                        currentStep === 4 && (
+                            <div className="create-step">
+                                <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
+                                    <div className="step-icon-wrapper success" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
+                                        <span className="step-icon">✓</span>
+                                    </div>
+                                    <h2 className="step-title" style={{ fontSize: '1.5rem' }}>You&apos;re ready to go!</h2>
+                                    <p className="step-subtitle">Copy this code and paste it before the closing &lt;/body&gt; tag</p>
                                 </div>
-                                <h2 className="step-title" style={{ fontSize: '1.5rem' }}>You&apos;re ready to go!</h2>
-                                <p className="step-subtitle">Copy this code and paste it before the closing &lt;/body&gt; tag</p>
-                            </div>
 
-                            <div className="snippet-code-container" style={{ marginBottom: '1rem' }}>
-                                <div className="snippet-code-header">
-                                    <span>embed-script.js</span>
-                                    <button className="copy-btn" onClick={() => {
-                                        const snippet = `<!-- Snowky Chat Widget -->
+                                <div className="snippet-code-container" style={{ marginBottom: '1rem' }}>
+                                    <div className="snippet-code-header">
+                                        <span>embed-script.js</span>
+                                        <button className="copy-btn" onClick={() => {
+                                            const snippet = `<!-- Snowky Chat Widget -->
 <script>
   window.SNOWKY_CONFIG = {
     projectId: "${generatedProjectId}",
@@ -974,11 +1094,11 @@ export default function CreateProjectPage() {
   };
 </script>
 <script src="${window.location.origin}/widget.js" async></script>`;
-                                        navigator.clipboard.writeText(snippet);
-                                        alert('Copied to clipboard!');
-                                    }}><i className="far fa-copy"></i> Copy Code</button>
-                                </div>
-                                <pre className="snippet-code">{`<!-- Snowky Chat Widget -->
+                                            navigator.clipboard.writeText(snippet);
+                                            alert('Copied to clipboard!');
+                                        }}><i className="far fa-copy"></i> Copy Code</button>
+                                    </div>
+                                    <pre className="snippet-code">{`<!-- Snowky Chat Widget -->
 <script>
   window.SNOWKY_CONFIG = {
     projectId: "${generatedProjectId}",
@@ -994,40 +1114,40 @@ export default function CreateProjectPage() {
   };
 </script>
 <script src="${window.location.origin}/widget.js" async></script>`}</pre>
-                            </div>
+                                </div>
 
-                            <div className="installation-tips" style={{ padding: '1rem' }}>
-                                <h4><i className="fas fa-lightbulb"></i> Installation Tips</h4>
-                                <ul>
-                                    <li>Paste this code right before the closing <code>&lt;/body&gt;</code> tag</li>
-                                    <li>Works with WordPress, Shopify, Wix, and custom HTML/React sites</li>
-                                    <li>Your widget will appear as a floating button on the bottom-right</li>
-                                    <li>The AI will respond with <strong>{formData.tone}</strong> personality and <strong>{formData.emojiUsage}</strong> emoji usage</li>
-                                </ul>
-                            </div>
+                                <div className="installation-tips" style={{ padding: '1rem' }}>
+                                    <h4><i className="fas fa-lightbulb"></i> Installation Tips</h4>
+                                    <ul>
+                                        <li>Paste this code right before the closing <code>&lt;/body&gt;</code> tag</li>
+                                        <li>Works with WordPress, Shopify, Wix, and custom HTML/React sites</li>
+                                        <li>Your widget will appear as a floating button on the bottom-right</li>
+                                        <li>The AI will respond with <strong>{formData.tone}</strong> personality and <strong>{formData.emojiUsage}</strong> emoji usage</li>
+                                    </ul>
+                                </div>
 
-                            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: '#fef3c7', borderRadius: '12px', border: '1px solid #fcd34d' }}>
-                                <h4 style={{ margin: '0 0 0.5rem 0', color: '#92400e' }}><i className="fas fa-flask"></i> Test Your Widget</h4>
-                                <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#92400e' }}>Create a simple HTML file to test your widget:</p>
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    style={{ background: '#f59e0b', color: 'white', border: 'none' }}
-                                    onClick={() => {
-                                        const config = {
-                                            projectId: generatedProjectId,
-                                            theme: formData.theme,
-                                            color: formData.color,
-                                            tone: formData.tone,
-                                            emojiUsage: formData.emojiUsage,
-                                            botName: formData.botName || 'Snowky Assistant',
-                                            welcomeMessage: formData.welcomeMessage || '',
-                                            launcherColor: formData.launcherColor,
-                                            launcherShape: formData.launcherShape,
-                                            chatIcon: formData.chatIcon
-                                        };
+                                <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: '#fef3c7', borderRadius: '12px', border: '1px solid #fcd34d' }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#92400e' }}><i className="fas fa-flask"></i> Test Your Widget</h4>
+                                    <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: '#92400e' }}>Create a simple HTML file to test your widget:</p>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        style={{ background: '#f59e0b', color: 'white', border: 'none' }}
+                                        onClick={() => {
+                                            const config = {
+                                                projectId: generatedProjectId,
+                                                theme: formData.theme,
+                                                color: formData.color,
+                                                tone: formData.tone,
+                                                emojiUsage: formData.emojiUsage,
+                                                botName: formData.botName || 'Snowky Assistant',
+                                                welcomeMessage: formData.welcomeMessage || '',
+                                                launcherColor: formData.launcherColor,
+                                                launcherShape: formData.launcherShape,
+                                                chatIcon: formData.chatIcon
+                                            };
 
-                                        const testHTML = `<!DOCTYPE html>
+                                            const testHTML = `<!DOCTYPE html>
 <html>
 <head>
     <title>Test Snowky Widget</title>
@@ -1050,34 +1170,81 @@ export default function CreateProjectPage() {
     <script src="${window.location.origin}/widget.js"></script>
 </body>
 </html>`;
-                                        const blob = new Blob([testHTML], { type: 'text/html' });
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = 'test-widget.html';
-                                        document.body.appendChild(a); // Required for Firefox and some Chrome versions
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        URL.revokeObjectURL(url);
-                                    }}
-                                >
-                                    <i className="fas fa-download"></i> Download Test HTML
-                                </button>
+                                            const blob = new Blob([testHTML], { type: 'text/html' });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = 'test-widget.html';
+                                            document.body.appendChild(a); // Required for Firefox and some Chrome versions
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                        }}
+                                    >
+                                        <i className="fas fa-download"></i> Download Test HTML
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
-                </div>
-                {/* Navigation Actions */}
-                <div className="create-actions" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #f3f4f6', background: 'white', marginTop: 0 }}>
-                    <button onClick={handlePrev} disabled={currentStep === 1} className="btn btn-secondary" style={{ opacity: currentStep === 1 ? 0.5 : 1 }}>
-                        <i className="fas fa-arrow-left"></i> Back
-                    </button>
-                    <button onClick={currentStep === 4 ? handleFinish : handleNext} className="btn btn-primary">
-                        {currentStep === 4 ? "Finish & Deploy" : "Next Step"} <i className={`fas ${currentStep === 4 ? 'fa-rocket' : 'fa-arrow-right'}`}></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+                </div >
+
+            </div >
+
+            {/* Navigation Actions - Fixed at bottom */}
+            < div style={{
+                position: 'fixed',
+                bottom: 0,
+                left: '220px',
+                right: 0,
+                padding: '1rem 2rem',
+                borderTop: '1px solid #e2e8f0',
+                background: 'white',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                zIndex: 100,
+                boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+            }}>
+                <button
+                    onClick={handlePrev}
+                    disabled={currentStep === 1}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: 'white',
+                        color: currentStep === 1 ? '#cbd5e1' : '#64748b',
+                        cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}
+                >
+                    <i className="fas fa-arrow-left"></i> Back
+                </button>
+                <button
+                    onClick={currentStep === 4 ? handleFinish : handleNext}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+                    }}
+                >
+                    {currentStep === 4 ? "Finish & Deploy" : "Next Step"}
+                    <i className={`fas ${currentStep === 4 ? 'fa-rocket' : 'fa-arrow-right'}`}></i>
+                </button>
+            </div >
+        </div >
     );
 }

@@ -62,6 +62,9 @@ export default function DashboardPage() {
                 if (projectsRes.ok) {
                     const projectsData = await projectsRes.json();
                     setProjects(projectsData);
+                } else {
+                    const errText = await projectsRes.text();
+                    console.error("Failed to fetch projects:", projectsRes.status, errText);
                 }
             } catch (error) {
                 console.error("Dashboard load error:", error);

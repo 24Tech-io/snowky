@@ -27,13 +27,22 @@ export async function POST(
 
         const formData = await req.formData();
         const textInput = formData.get("text") as string | null;
-        const file = formData.get("file") as File | null;
+
+        // Get all files (support multiple file uploads)
+        const files = formData.getAll("file") as File[];
+        const file = files.length > 0 ? files[0] : null;
+
+        console.log("Train endpoint - projectId:", projectId);
+        console.log("Train endpoint - files count:", files.length);
+        console.log("Train endpoint - textInput:", textInput ? "yes (" + textInput.length + " chars)" : "no");
 
         let contentToTrain = "";
         let filename = "Manual Entry";
 
-        if (file) {
+        if (file && file.size > 0) {
             filename = file.name;
+            console.log("Processing file:", filename, "type:", file.type, "size:", file.size);
+
             const buffer = Buffer.from(await file.arrayBuffer());
 
             if (file.type === "application/pdf") {
@@ -59,13 +68,24 @@ export async function POST(
                 // Default to text (txt, md, etc)
                 contentToTrain = buffer.toString("utf-8");
             }
-        } else if (textInput) {
+        } else if (textInput && textInput.trim()) {
             contentToTrain = textInput;
         }
 
         if (!contentToTrain || !contentToTrain.trim()) {
-            return NextResponse.json({ error: "No text content found in upload" }, { status: 400 });
+            console.log("No content to train - file:", file ? "yes" : "no", "textInput:", textInput ? "yes" : "no");
+            return NextResponse.json({
+                error: "No text content found in upload",
+                debug: {
+                    filePresent: !!file,
+                    fileSize: file?.size || 0,
+                    textInputPresent: !!textInput,
+                    textInputLength: textInput?.length || 0
+                }
+            }, { status: 400 });
         }
+
+        console.log("Content to train:", contentToTrain.substring(0, 100) + "...");
 
         // 1. Create Document record
         const document = await prisma.document.create({
@@ -84,18 +104,28 @@ export async function POST(
             chunks.push(contentToTrain.slice(i, i + chunkSize));
         }
 
-        console.log(`Processing ${chunks.length} chunks for project ${projectId}...`);
+        // 3. Generate and store embeddings (Optional/Non-blocking)
+        let embeddedChunks = 0;
+        let embeddingWarning = null;
 
-        // 3. Generate and store embeddings
-        for (const chunk of chunks) {
-            const vector = await generateEmbedding(chunk);
-            await storeEmbedding(document.id, chunk, vector);
+        try {
+            console.log(`Processing ${chunks.length} chunks for project ${projectId}...`);
+            for (const chunk of chunks) {
+                const vector = await generateEmbedding(chunk);
+                await storeEmbedding(document.id, chunk, vector);
+                embeddedChunks++;
+            }
+        } catch (embeddingError: any) {
+            console.error("Embedding generation failed (continuing with raw text only):", embeddingError.message);
+            embeddingWarning = "Embedding failed, using raw text fallback. " + embeddingError.message;
         }
 
         return NextResponse.json({
             success: true,
             chunksProcessed: chunks.length,
-            documentId: document.id
+            embeddedChunks: embeddedChunks,
+            documentId: document.id,
+            warning: embeddingWarning
         });
 
     } catch (error: any) {

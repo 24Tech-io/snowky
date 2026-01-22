@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   // Suppress warnings for optional dependencies in pdf-parse
   serverExternalPackages: ['pdf-parse'],
 
+  // Fix for multiple lockfiles warning
+  turbopack: {
+    root: process.cwd(),
+  },
+
   async redirects() {
     return [
       {
@@ -29,6 +34,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-};
+} as any;
 
 export default nextConfig;

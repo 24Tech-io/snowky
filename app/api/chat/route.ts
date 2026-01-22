@@ -46,11 +46,40 @@ export async function POST(req: Request) {
                 console.log(`Found ${contextChunks.length} relevant chunks.`);
                 contextText = contextChunks.map((c: any) => c.content).join("\n---\n");
             } else {
-                console.log("No relevant context found.");
+                console.log("No relevant vector context found. Checking for raw documents...");
+                // Fallback: Get raw text from documents (limit to first 30k chars to avoid token limits)
+                // This enables "Zero-Training" RAG for small projects
+                const rawDocs = await import("@/lib/prisma").then(m => m.prisma.document.findMany({
+                    where: { projectId },
+                    take: 5, // Limit to 5 docs for now
+                    orderBy: { createdAt: 'desc' },
+                    select: { content: true, name: true }
+                }));
+
+                if (rawDocs.length > 0) {
+                    console.log(`Found ${rawDocs.length} raw documents for fallback context.`);
+                    contextText = rawDocs.map((d: any) => `[Source: ${d.name}]\n${d.content}`).join("\n---\n").substring(0, 30000);
+                } else {
+                    console.log("No raw documents found either.");
+                }
             }
-        } catch (err) {
-            console.error("Vector search failed:", err);
-            // Continue without context if search fails
+        } catch (err: any) {
+            console.error("Vector search failed:", err.message);
+            // Fallback on error too
+            try {
+                const rawDocs = await import("@/lib/prisma").then(m => m.prisma.document.findMany({
+                    where: { projectId },
+                    take: 5,
+                    orderBy: { createdAt: 'desc' },
+                    select: { content: true, name: true }
+                }));
+                if (rawDocs.length > 0) {
+                    console.log(`Fallback: Using ${rawDocs.length} raw documents after vector error.`);
+                    contextText = rawDocs.map((d: any) => `[Source: ${d.name}]\n${d.content}`).join("\n---\n").substring(0, 30000);
+                }
+            } catch (dbErr) {
+                console.error("Fallback DB fetch failed:", dbErr);
+            }
         }
         // ---------------------
 

@@ -71,34 +71,66 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Invalid token" }, { status: 401 });
         }
 
-        const projects = await prisma.project.findMany({
-            where: { ownerId: payload.userId },
-            orderBy: { createdAt: 'desc' },
-            include: {
-                _count: {
-                    select: { sessions: true }
+        // Retry logic for database connection
+        const maxRetries = 3;
+        let lastError: any = null;
+        let projects: any[] = [];
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                projects = await prisma.project.findMany({
+                    where: { ownerId: payload.userId },
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        _count: {
+                            select: { sessions: true }
+                        }
+                    }
+                });
+                break; // Success, exit retry loop
+            } catch (dbError: any) {
+                lastError = dbError;
+                console.error(`Database query attempt ${attempt} failed:`, dbError.message);
+                if (attempt < maxRetries) {
+                    // Wait before retry (exponential backoff)
+                    await new Promise(r => setTimeout(r, attempt * 1000));
                 }
             }
-        });
+        }
+
+        if (projects.length === 0 && lastError) {
+            console.error("Failed to fetch projects after retries:", lastError);
+            throw lastError;
+        }
+
+        console.log(`Fetched ${projects.length} projects. Mapping data...`);
 
         // Transform for frontend
         const formattedProjects = projects.map(p => {
-            const settings = p.settings as any;
-            const theme = p.theme as any; // Cast to access JSON props
+            try {
+                const settings = (p.settings as any) || {};
+                const theme = (p.theme as any) || {};
+                const sessionCount = p._count?.sessions || 0;
 
-            return {
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                status: settings.status || "Active",
-                tone: settings.tone || "friendly",
-                color: theme.color || "#6366f1",
-                theme: theme.theme || "modern",
-                messages: p._count.sessions * 5, // Approximate msgs? Or count from messages?
-                satisfaction: "100%", // Placeholder
-                createdAt: p.createdAt.toISOString()
-            };
-        });
+                return {
+                    id: p.id,
+                    name: p.name || "Untitled",
+                    description: p.description || "",
+                    status: settings.status || "Active",
+                    tone: settings.tone || "friendly",
+                    color: theme.color || "#6366f1",
+                    theme: theme.theme || "modern",
+                    messages: sessionCount * 5,
+                    satisfaction: "100%",
+                    createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString()
+                };
+            } catch (mapError) {
+                console.error("Error mapping project:", p.id, mapError);
+                return null;
+            }
+        }).filter(Boolean); // Remove nulls
+
+        console.log("Mapping complete. Returning response.");
 
         return NextResponse.json(formattedProjects);
 
