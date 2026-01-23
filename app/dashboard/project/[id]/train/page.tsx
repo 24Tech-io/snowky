@@ -2,11 +2,11 @@
 
 import { useState, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 
 export default function TrainPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
-    const router = useRouter();
+
     const [text, setText] = useState("");
     const [file, setFile] = useState<File | null>(null);
     const [activeTab, setActiveTab] = useState<'text' | 'file'>('text');

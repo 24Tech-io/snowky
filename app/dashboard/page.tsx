@@ -52,7 +52,7 @@ export default function DashboardPage() {
         fetchUserData();
         // Trigger a background refresh of projects to ensure data is fresh
         refreshProjects();
-    }, []);
+    }, [refreshProjects]);
 
     const getEmbedCode = (project: Project) => {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';

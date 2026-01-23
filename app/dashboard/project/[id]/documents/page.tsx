@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -43,11 +43,7 @@ export default function DocumentsPage() {
     const [qaPairs, setQaPairs] = useState<QAPair[]>([{ question: "", answer: "" }]);
     const [savingQA, setSavingQA] = useState(false);
 
-    useEffect(() => {
-        fetchDocuments();
-    }, [projectId]);
-
-    const fetchDocuments = async () => {
+    const fetchDocuments = useCallback(async () => {
         try {
             setLoading(true);
             const res = await fetch(`/api/projects/${projectId}/documents`);
@@ -59,7 +55,11 @@ export default function DocumentsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
 
     const handleDelete = async (docId: string) => {
         if (!confirm("Are you sure you want to delete this document? This cannot be undone.")) {

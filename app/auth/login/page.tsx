@@ -35,7 +35,7 @@ export default function LoginPage() {
             } else {
                 setError(data.error || "Login failed");
             }
-        } catch (err) {
+        } catch (_err) {
             setError("An error occurred. Please try again.");
         } finally {
             setIsLoading(false);
@@ -153,9 +153,9 @@ export default function LoginPage() {
                                     <span className="checkbox-custom"></span>
                                     Remember me
                                 </label>
-                                <a href="#" className="forgot-link">
+                                <Link href="/auth/forgot-password" className="forgot-link">
                                     Forgot password?
-                                </a>
+                                </Link>
                             </div>
 
                             <button

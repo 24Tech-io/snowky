@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateEmbedding, storeEmbedding } from "@/app/lib/vector";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-// @ts-ignore
+
 if (typeof DOMMatrix === 'undefined') {
     (global as any).DOMMatrix = class DOMMatrix { };
 }

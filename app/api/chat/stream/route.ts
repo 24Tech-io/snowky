@@ -123,34 +123,97 @@ ${conversationHistory ? `PREVIOUS CONVERSATION:\n${conversationHistory}\n\n` : '
         const stream = new ReadableStream({
             async start(controller) {
                 try {
-                    // Use Gemini's streaming API with retry logic
-                    let result: any = null;
-                    let retries = 3;
-                    while (retries > 0) {
-                        try {
-                            result = await geminiModel.generateContentStream(fullPrompt);
-                            break;
-                        } catch (err: any) {
-                            if (err.message?.includes('429') && retries > 1) {
-                                console.log(`[Stream] Hit rate limit (429), retrying... (${retries} left)`);
-                                retries--;
-                                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
-                                continue;
-                            }
-                            throw err;
+                    // Import tools dynamically to avoid circular deps if any
+                    const { toolsDefinition } = await import("@/lib/ai/tools");
+                    const { createTicketAction, searchKBAction, escalateToHumanAction } = await import("@/lib/ai/actions");
+
+                    // Build chat history with system prompt as first message
+                    // Note: In streaming route, we moved this logic inside start() or need to pass it.
+                    // But req body is read outside. We need to pass chatHistory into the stream closure or reconstruct it.
+
+                    const chatHistory = [
+                        { role: 'user', parts: [{ text: `[System Instructions]\n${systemPrompt}` }] },
+                        { role: 'model', parts: [{ text: `Understood! I am ${botName}.` }] },
+                        ...messages.slice(0, -1).map((m: any) => ({
+                            role: m.role === 'user' ? 'user' : 'model',
+                            parts: [{ text: m.content }],
+                        }))
+                    ];
+
+                    // Start chat with tools
+                    const chat = geminiModel.startChat({
+                        history: chatHistory as any,
+                        generationConfig: { maxOutputTokens: 1000 },
+                        tools: [{ functionDeclarations: toolsDefinition as any }]
+                    });
+
+                    // Send message
+                    const result = await chat.sendMessageStream(lastMessage);
+
+                    // We need to handle potential function calls in the stream
+                    // The Google SDK yields chunks. A chunk might be text OR a function call.
+
+                    let functionCall = null;
+                    let textResponse = "";
+
+                    for await (const chunk of result.stream) {
+                        const chunkText = chunk.text();
+
+                        // Check for function call
+                        const calls = chunk.functionCalls();
+                        if (calls && calls.length > 0) {
+                            functionCall = calls[0];
+                            // Note: We consume the whole stream to get the full function call args usually
+                            // But SDK might give per chunk. 
+                            // Usually function call comes as one complete thing or built up.
+                            // SDK puts it in `functionCalls()` accessor.
+                            continue;
+                        }
+
+                        if (chunkText) {
+                            textResponse += chunkText;
+                            const sseData = `data: ${JSON.stringify({ chunk: chunkText })}\n\n`;
+                            controller.enqueue(encoder.encode(sseData));
                         }
                     }
 
-                    if (!result || !result.stream) {
-                        throw new Error("Failed to initialize Gemini stream");
-                    }
+                    // If we had a function call, execute it and feed back
+                    if (functionCall) {
+                        const fnName = functionCall.name;
+                        const fnArgs = functionCall.args;
 
-                    for await (const chunk of result.stream) {
-                        const text = chunk.text();
-                        if (text) {
-                            // Send each chunk as SSE data
-                            const sseData = `data: ${JSON.stringify({ chunk: text })}\n\n`;
-                            controller.enqueue(encoder.encode(sseData));
+                        // Notify frontend we are working (optional, via special chunk?)
+                        // controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: " ⚙️ Processing..." })}\n\n`));
+
+                        let toolResult;
+                        if (fnName === 'create_ticket') {
+                            toolResult = await createTicketAction(projectId, fnArgs);
+                        } else if (fnName === 'search_kb') {
+                            toolResult = await searchKBAction(projectId, fnArgs);
+                        } else if (fnName === 'escalate_to_human') {
+                            toolResult = await escalateToHumanAction(projectId, fnArgs);
+                        } else {
+                            toolResult = { error: "Unknown tools" };
+                        }
+
+                        // Send result back to model
+                        // Note: sendMessageStream can be called again on the same chat instance
+                        // We need to send a FunctionResponse part.
+
+                        const toolResponseResult = await chat.sendMessageStream([{
+                            functionResponse: {
+                                name: fnName,
+                                response: { content: toolResult }
+                            }
+                        }]);
+
+                        // Stream the FINAL answer
+                        for await (const chunk of toolResponseResult.stream) {
+                            const text = chunk.text();
+                            if (text) {
+                                const sseData = `data: ${JSON.stringify({ chunk: text })}\n\n`;
+                                controller.enqueue(encoder.encode(sseData));
+                            }
                         }
                     }
 

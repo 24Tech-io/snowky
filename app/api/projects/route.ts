@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get("token")?.value;

@@ -38,6 +38,15 @@ export default function ProjectManagePage({ params }: { params: Promise<{ id: st
         loading: true
     });
 
+    // Analytics Stats
+    const [analytics, setAnalytics] = useState({
+        totalSessions: 0,
+        totalMessages: 0,
+        unansweredMessages: 0,
+        avgResponseTime: 0,
+        loading: true
+    });
+
     useEffect(() => {
         const fetchProject = async () => {
             try {
@@ -85,6 +94,30 @@ export default function ProjectManagePage({ params }: { params: Promise<{ id: st
         };
 
         if (id) fetchDocStats();
+    }, [id]);
+
+    // Fetch analytics
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                const res = await fetch(`/api/projects/${id}/analytics`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setAnalytics({
+                        totalSessions: data.overview?.totalSessions || 0,
+                        totalMessages: data.overview?.totalMessages || 0,
+                        unansweredMessages: data.overview?.unansweredMessages || 0,
+                        avgResponseTime: data.overview?.avgResponseTime || 0,
+                        loading: false
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching analytics:", error);
+                setAnalytics(prev => ({ ...prev, loading: false }));
+            }
+        };
+
+        if (id) fetchAnalytics();
     }, [id]);
 
     const getEmbedCode = () => {
@@ -375,17 +408,108 @@ export default function ProjectManagePage({ params }: { params: Promise<{ id: st
                 </div>
             </div>
 
+            {/* CRM, Ticketing & Channels Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '1.5rem' }}>
+                <div className="snippets-section" style={{ borderColor: '#6366f1' }}>
+                    <h3 className="snippets-title" style={{ marginBottom: '1rem', color: '#4f46e5' }}>
+                        <i className="fas fa-inbox" style={{ marginRight: '0.5rem' }}></i> Unified Inbox
+                    </h3>
+                    <p style={{ color: 'var(--gray-500)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        Manage chats from Web, WhatsApp, and more.
+                    </p>
+                    <Link href={`/dashboard/project/${id}/inbox`} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center', backgroundColor: '#4f46e5', borderColor: '#4338ca' }}>
+                        <i className="fas fa-comments"></i> Open Inbox
+                    </Link>
+                </div>
+
+                {/* CRM System */}
+                <div className="snippets-section" style={{ borderColor: '#e0e7ff' }}>
+                    <h3 className="snippets-title" style={{ marginBottom: '1rem', color: '#4338ca' }}>
+                        <i className="fas fa-users" style={{ marginRight: '0.5rem' }}></i> CRM & Contacts
+                    </h3>
+                    <p style={{ color: 'var(--gray-500)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        Manage your customer database.
+                    </p>
+                    <Link href={`/dashboard/project/${id}/crm`} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                        <i className="fas fa-address-book"></i> View Contacts
+                    </Link>
+                </div>
+
+                {/* Ticketing System */}
+                <div className="snippets-section" style={{ borderColor: '#fff7ed' }}>
+                    <h3 className="snippets-title" style={{ marginBottom: '1rem', color: '#c2410c' }}>
+                        <i className="fas fa-ticket-alt" style={{ marginRight: '0.5rem' }}></i> Ticketing
+                    </h3>
+                    <p style={{ color: 'var(--gray-500)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        Manage support tickets.
+                    </p>
+                    <Link href={`/dashboard/project/${id}/tickets`} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                        <i className="fas fa-list-alt"></i> View Tickets
+                    </Link>
+                </div>
+
+                {/* Analytics System */}
+                <div className="snippets-section" style={{ borderColor: '#8b5cf6' }}>
+                    <h3 className="snippets-title" style={{ marginBottom: '1rem', color: '#7c3aed' }}>
+                        <i className="fas fa-chart-line" style={{ marginRight: '0.5rem' }}></i> Analytics
+                    </h3>
+                    <p style={{ color: 'var(--gray-500)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        Track visitor behavior and events.
+                    </p>
+                    <Link href={`/dashboard/project/${id}/analytics`} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                        <i className="fas fa-chart-bar"></i> View Reports
+                    </Link>
+                </div>
+            </div>
+
+            {/* Channels Configuration (Separate Row or Small Link) */}
+            <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                        <i className="fab fa-whatsapp text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-slate-700">Connect Channels</h4>
+                        <p className="text-sm text-slate-500">Add WhatsApp, Messenger, and Email.</p>
+                    </div>
+                </div>
+                <Link href={`/dashboard/project/${id}/settings/channels`} className="text-sm font-medium text-blue-600 hover:underline">
+                    Configure Integrations →
+                </Link>
+            </div>
+
             {/* Analytics Section */}
             <div className="snippets-section" style={{ marginTop: '1.5rem' }}>
-                <h3 className="snippets-title" style={{ marginBottom: '1rem' }}>
-                    <i className="fas fa-chart-line" style={{ marginRight: '0.5rem' }}></i> Analytics & Insights
-                </h3>
-                <p style={{ color: 'var(--gray-500)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                    View detailed analytics about your chatbot's performance and user interactions.
-                </p>
-                <Link href={`/dashboard/project/${id}/analytics`} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <i className="fas fa-chart-bar"></i> View Analytics Dashboard
-                </Link>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 className="snippets-title" style={{ margin: 0 }}>
+                        <i className="fas fa-chart-line" style={{ marginRight: '0.5rem' }}></i> Analytics & Insights
+                    </h3>
+                    <Link href={`/dashboard/project/${id}/analytics`} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                        <i className="fas fa-external-link-alt"></i> View Full Dashboard
+                    </Link>
+                </div>
+                {analytics.loading ? (
+                    <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--gray-500)' }}>Loading analytics...</div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                        <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', borderRadius: '12px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#4f46e5' }}>{analytics.totalSessions}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#6366f1', marginTop: '0.25rem' }}>Total Sessions</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', borderRadius: '12px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#059669' }}>{analytics.totalMessages}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.25rem' }}>Total Messages</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', borderRadius: '12px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#d97706' }}>{analytics.unansweredMessages}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#f59e0b', marginTop: '0.25rem' }}>Unanswered</div>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)', borderRadius: '12px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#db2777' }}>{analytics.avgResponseTime}<span style={{ fontSize: '0.9rem' }}>ms</span></div>
+                            <div style={{ fontSize: '0.8rem', color: '#ec4899', marginTop: '0.25rem' }}>Avg Response</div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Danger Zone */}

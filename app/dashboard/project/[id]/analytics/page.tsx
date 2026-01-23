@@ -5,23 +5,15 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 interface Analytics {
-    overview: {
-        totalSessions: number;
-        recentSessions: number;
-        totalMessages: number;
-        unansweredMessages: number;
-        avgResponseTime: number;
-        satisfactionAvg: number | null;
-        satisfactionCount: number;
-    };
-    topQuestions: string[];
-    dailyStats: { date: string; sessions: number; messages: number }[];
-    documentStats: {
-        total: number;
-        synced: number;
-        pending: number;
-        failed: number;
-    };
+    totalViews: number;
+    activeVisitors: number;
+    recentEvents: {
+        id: string;
+        type: string;
+        visitorId: string;
+        data: any;
+        createdAt: string;
+    }[];
 }
 
 export default function AnalyticsPage() {
@@ -33,22 +25,22 @@ export default function AnalyticsPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                setLoading(true);
+                const res = await fetch(`/api/projects/${projectId}/analytics`);
+                if (!res.ok) throw new Error("Failed to fetch analytics");
+                const data = await res.json();
+                setAnalytics(data);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchAnalytics();
     }, [projectId]);
-
-    const fetchAnalytics = async () => {
-        try {
-            setLoading(true);
-            const res = await fetch(`/api/projects/${projectId}/analytics`);
-            if (!res.ok) throw new Error("Failed to fetch analytics");
-            const data = await res.json();
-            setAnalytics(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const StatCard = ({ title, value, subtitle, icon, color }: {
         title: string;
@@ -86,7 +78,7 @@ export default function AnalyticsPage() {
         </div>
     );
 
-    const maxMessages = analytics?.dailyStats ? Math.max(...analytics.dailyStats.map(d => d.messages), 1) : 1;
+
 
     return (
         <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
@@ -121,179 +113,65 @@ export default function AnalyticsPage() {
                 </div>
             ) : analytics ? (
                 <>
-                    {/* Overview Stats */}
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: "1rem",
-                        marginBottom: "2rem"
-                    }}>
-                        <StatCard
-                            icon="💬"
-                            title="Total Sessions"
-                            value={analytics.overview.totalSessions}
-                            subtitle={`${analytics.overview.recentSessions} in last 30 days`}
-                            color="#6366f1"
-                        />
-                        <StatCard
-                            icon="📨"
-                            title="Total Messages"
-                            value={analytics.overview.totalMessages}
-                            color="#0ea5e9"
-                        />
-                        <StatCard
-                            icon="❓"
-                            title="Unanswered"
-                            value={analytics.overview.unansweredMessages}
-                            subtitle="Questions without context"
-                            color="#f59e0b"
-                        />
-                        <StatCard
-                            icon="⚡"
-                            title="Avg Response Time"
-                            value={analytics.overview.avgResponseTime ? `${analytics.overview.avgResponseTime}ms` : "N/A"}
-                            color="#10b981"
-                        />
-                        <StatCard
-                            icon="⭐"
-                            title="Satisfaction"
-                            value={analytics.overview.satisfactionAvg ? `${analytics.overview.satisfactionAvg}/5` : "N/A"}
-                            subtitle={analytics.overview.satisfactionCount ? `${analytics.overview.satisfactionCount} ratings` : "No ratings yet"}
-                            color="#8b5cf6"
-                        />
-                    </div>
-
-                    {/* Charts Row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
-                        {/* Activity Chart */}
-                        <div style={{
-                            background: "white",
-                            borderRadius: "16px",
-                            padding: "1.5rem",
-                            border: "1px solid #e2e8f0"
-                        }}>
-                            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1e293b", marginBottom: "1.5rem" }}>
-                                📈 Activity (Last 7 Days)
-                            </h3>
-                            <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem", height: "200px" }}>
-                                {analytics.dailyStats.map((day, i) => (
-                                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                                        <div style={{
-                                            width: "100%",
-                                            height: `${(day.messages / maxMessages) * 160}px`,
-                                            background: "linear-gradient(180deg, #6366f1, #8b5cf6)",
-                                            borderRadius: "8px 8px 0 0",
-                                            minHeight: "4px",
-                                            transition: "height 0.3s ease"
-                                        }} title={`${day.messages} messages`} />
-                                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                                            {new Date(day.date).toLocaleDateString("en", { weekday: "short" })}
-                                        </span>
-                                    </div>
-                                ))}
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                            <div className="text-slate-400 text-sm mb-1">Active Visitors (5m)</div>
+                            <div className="text-4xl font-bold text-green-400">{analytics?.activeVisitors || 0}</div>
+                            <div className="text-xs text-green-500/50 mt-2 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live
                             </div>
                         </div>
-
-                        {/* Document Status */}
-                        <div style={{
-                            background: "white",
-                            borderRadius: "16px",
-                            padding: "1.5rem",
-                            border: "1px solid #e2e8f0"
-                        }}>
-                            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1e293b", marginBottom: "1.5rem" }}>
-                                📚 Training Data Status
-                            </h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ color: "#64748b" }}>Total Documents</span>
-                                    <span style={{ fontWeight: 600, color: "#1e293b" }}>{analytics.documentStats.total}</span>
-                                </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }}></span>
-                                        Synced
-                                    </span>
-                                    <span style={{ fontWeight: 600, color: "#10b981" }}>{analytics.documentStats.synced}</span>
-                                </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b" }}></span>
-                                        Pending
-                                    </span>
-                                    <span style={{ fontWeight: 600, color: "#f59e0b" }}>{analytics.documentStats.pending}</span>
-                                </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444" }}></span>
-                                        Failed
-                                    </span>
-                                    <span style={{ fontWeight: 600, color: "#ef4444" }}>{analytics.documentStats.failed}</span>
-                                </div>
-                            </div>
-                            <Link href={`/dashboard/project/${projectId}/documents`} style={{
-                                display: "block",
-                                textAlign: "center",
-                                marginTop: "1.5rem",
-                                padding: "0.75rem",
-                                background: "#f8fafc",
-                                borderRadius: "8px",
-                                color: "#6366f1",
-                                textDecoration: "none",
-                                fontWeight: 500
-                            }}>
-                                Manage Documents →
-                            </Link>
+                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                            <div className="text-slate-400 text-sm mb-1">Total Page Views</div>
+                            <div className="text-4xl font-bold text-slate-900">{analytics?.totalViews || 0}</div>
                         </div>
                     </div>
 
-                    {/* Top Questions */}
-                    <div style={{
-                        background: "white",
-                        borderRadius: "16px",
-                        padding: "1.5rem",
-                        border: "1px solid #e2e8f0"
-                    }}>
-                        <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#1e293b", marginBottom: "1rem" }}>
-                            🔥 Recent Questions
+                    {/* Live Event Feed */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span className="text-blue-400">⚡</span> Recent Activity
                         </h3>
-                        {analytics.topQuestions.length === 0 ? (
-                            <p style={{ color: "#64748b", textAlign: "center", padding: "2rem" }}>
-                                No questions yet. Share your widget to start collecting data!
-                            </p>
-                        ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                {analytics.topQuestions.map((question, i) => (
-                                    <div key={i} style={{
-                                        display: "flex",
-                                        alignItems: "flex-start",
-                                        gap: "1rem",
-                                        padding: "0.75rem",
-                                        background: "#f8fafc",
-                                        borderRadius: "8px"
-                                    }}>
-                                        <span style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            background: "#6366f1",
-                                            color: "white",
-                                            borderRadius: "50%",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            fontSize: "0.75rem",
-                                            fontWeight: 600,
-                                            flexShrink: 0
-                                        }}>
-                                            {i + 1}
-                                        </span>
-                                        <span style={{ color: "#1e293b", fontSize: "0.9rem" }}>
-                                            {question.length > 100 ? question.substring(0, 100) + "..." : question}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm text-slate-400">
+                                <thead className="text-xs uppercase bg-slate-950/50 text-slate-500">
+                                    <tr>
+                                        <th className="px-4 py-3 rounded-l-lg">Time</th>
+                                        <th className="px-4 py-3">Event</th>
+                                        <th className="px-4 py-3">Visitor</th>
+                                        <th className="px-4 py-3 rounded-r-lg">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/50">
+                                    {analytics?.recentEvents?.map((evt: any) => (
+                                        <tr key={evt.id} className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                                                {new Date(evt.createdAt).toLocaleTimeString()}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${evt.type === 'page_view' ? 'bg-blue-500/10 text-blue-400' :
+                                                    evt.type === 'click' ? 'bg-purple-500/10 text-purple-400' : 'bg-slate-700 text-slate-300'
+                                                    }`}>
+                                                    {evt.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 font-mono text-xs">{evt.visitorId.slice(0, 8)}...</td>
+                                            <td className="px-4 py-3 max-w-xs truncate" title={JSON.stringify(evt.data)}>
+                                                {evt.data?.url ? new URL(evt.data.url).pathname : JSON.stringify(evt.data)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!analytics?.recentEvents || analytics.recentEvents.length === 0) && (
+                                        <tr>
+                                            <td colSpan={4} className="px-4 py-8 text-center text-slate-600">
+                                                No events recorded yet.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </>
             ) : null}

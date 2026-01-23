@@ -11,13 +11,15 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  projects  Project[]
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String
+  name             String
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  projects         Project[]
 }
 
 model Project {
@@ -33,6 +35,10 @@ model Project {
   owner       User      @relation(fields: [ownerId], references: [id])
   documents   Document[]
   sessions    WidgetSession[]
+  contacts    Contact[]
+  tickets     Ticket[]
+  events      Event[]
+  channelConfigs ChannelConfig[]
 }
 
 model Document {
@@ -63,8 +69,11 @@ model WidgetSession {
   projectId String
   project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   visitorId String?
+  contactId String?
+  contact   Contact?      @relation(fields: [contactId], references: [id])
   history   Json          @default("[]")
   messages  ChatMessage[]
+  assignedTo String?       // User ID of the human agent assigned
   rating    Int?          // 1-5 user satisfaction rating
   resolved  Boolean?      // Did user mark as resolved?
   createdAt DateTime      @default(now())
@@ -72,13 +81,84 @@ model WidgetSession {
 }
 
 // Chat message for analytics tracking
+// Chat message for analytics tracking
 model ChatMessage {
   id           String        @id @default(uuid())
   sessionId    String
   session      WidgetSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role         String        // user | assistant
+  role         String        // user | assistant | agent
   content      String        @db.Text
   hadContext   Boolean       @default(true) // Did we find relevant docs for this message?
+  metadata     Json?         // Store channel info (whatsapp, messenger, etc.)
   responseTime Int?          // Response time in milliseconds
   createdAt    DateTime      @default(now())
+}
+
+// CRM: Contacts
+model Contact {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String?
+  email       String?
+  phone       String?
+  customFields Json     @default("{}")
+  sessions    WidgetSession[]
+  tickets     Ticket[]
+  events      Event[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([projectId, email]) // Unique email per project
+}
+
+// Ticketing System
+model Ticket {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id])
+  subject     String
+  status      String    @default("open") // open | pending | resolved | closed
+  priority    String    @default("medium") // low | medium | high | urgent
+  assigneeId  String?
+  comments    TicketComment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  author    String   // "agent" or "customer"
+  createdAt DateTime @default(now())
+}
+
+// Behavior Monitoring: Events
+model Event {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  visitorId String?  // For anonymous tracking
+  type      String   // page_view | button_click | custom
+  data      Json     @default("{}") // url, element_id, etc.
+  createdAt DateTime @default(now())
+}
+
+model ChannelConfig {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String   // whatsapp, messenger, email
+  enabled   Boolean  @default(true)
+  config    Json     // { phoneNumberId, accessToken, webhookVerifyToken, etc. }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, type])
 }

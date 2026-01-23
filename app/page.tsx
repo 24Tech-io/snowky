@@ -8,11 +8,11 @@ export default function Home() {
   const [activeTone, setActiveTone] = useState("friendly");
   const [activeColor, setActiveColor] = useState("#6366f1");
   const [activeTheme, setActiveTheme] = useState("modern");
-  const [botName, setBotName] = useState("Snowky Assistant");
-  const [welcomeMessage, setWelcomeMessage] = useState(
+  const [botName, _setBotName] = useState("Snowky Assistant");
+  const [welcomeMessage, _setWelcomeMessage] = useState(
     "Hi! I'm trained on your specific data. Ask me anything! 📚"
   );
-  const [emojiFreq, setEmojiFreq] = useState("medium");
+  const [emojiFreq, _setEmojiFreq] = useState("medium");
 
   // Extended themes from dashboard
   const themes = [

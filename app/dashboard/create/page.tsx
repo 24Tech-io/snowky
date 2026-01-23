@@ -57,7 +57,7 @@ export default function CreateProjectPage() {
     const [customColor, setCustomColor] = useState("#6366f1");
 
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [_isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setGeneratedProjectId("SNOWKY_" + Math.random().toString(36).substring(7).toUpperCase());
