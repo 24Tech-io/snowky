@@ -8,10 +8,10 @@ if (typeof DOMMatrix === 'undefined') {
     (global as any).DOMMatrix = class DOMMatrix { };
 }
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdf = require("pdf-parse");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const mammoth = require("mammoth");
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 export async function POST(
     req: Request,
