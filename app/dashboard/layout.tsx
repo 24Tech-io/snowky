@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SignOutButton } from "@/components/SignOutButton";
+import { ProjectsProvider } from "./ProjectsContext";
 
 async function getUser() {
     const cookieStore = await cookies();
@@ -41,36 +42,38 @@ export default async function DashboardLayout({
         .slice(0, 2);
 
     return (
-        <div className="dashboard-page">
-            {/* Dashboard Navigation */}
-            <nav className="dashboard-nav">
-                <div className="dashboard-nav-container">
-                    <div className="dashboard-nav-left">
-                        <Link href="/dashboard" className="dashboard-logo">
-                            <div className="dashboard-logo-icon">🐻‍❄️</div>
-                            <span className="dashboard-logo-text">Snowky</span>
-                        </Link>
-                    </div>
+        <ProjectsProvider>
+            <div className="dashboard-page">
+                {/* Dashboard Navigation */}
+                <nav className="dashboard-nav">
+                    <div className="dashboard-nav-container">
+                        <div className="dashboard-nav-left">
+                            <Link href="/dashboard" className="dashboard-logo">
+                                <div className="dashboard-logo-icon">🐻‍❄️</div>
+                                <span className="dashboard-logo-text">Snowky</span>
+                            </Link>
+                        </div>
 
-                    <div className="dashboard-nav-right">
-                        {/* Notification button removed as per user request */}
+                        <div className="dashboard-nav-right">
+                            {/* Notification button removed as per user request */}
 
-                        <div className="nav-user-menu">
-                            <div className="nav-user-avatar">{initials}</div>
-                            <div className="nav-user-info">
-                                <span className="nav-user-name">{user.name}</span>
-                                <span className="nav-user-email">{user.email}</span>
+                            <div className="nav-user-menu">
+                                <div className="nav-user-avatar">{initials}</div>
+                                <div className="nav-user-info">
+                                    <span className="nav-user-name">{user.name}</span>
+                                    <span className="nav-user-email">{user.email}</span>
+                                </div>
+                                <SignOutButton />
                             </div>
-                            <SignOutButton />
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
 
-            {/* Main Content */}
-            <main>
-                {children}
-            </main>
-        </div>
+                {/* Main Content */}
+                <main>
+                    {children}
+                </main>
+            </div>
+        </ProjectsProvider>
     );
 }

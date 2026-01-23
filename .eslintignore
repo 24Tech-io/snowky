@@ -1,0 +1,6 @@
+
+scripts/
+*.js
+!next.config.js
+!tailwind.config.js
+!postcss.config.js

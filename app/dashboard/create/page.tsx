@@ -23,6 +23,11 @@ interface Project {
     createdAt: string;
 }
 
+interface QAPair {
+    question: string;
+    answer: string;
+}
+
 export default function CreateProjectPage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +49,10 @@ export default function CreateProjectPage() {
     });
 
     const [uploadedFiles, setUploadedFiles] = useState<{ name: string, size: string }[]>([]);
-    const [showManualInput, setShowManualInput] = useState(false);
+    const [activeTab, setActiveTab] = useState<"files" | "url" | "qa" | "text">("files");
+    const [urlInput, setUrlInput] = useState("");
+    const [qaPairs, setQaPairs] = useState<QAPair[]>([{ question: "", answer: "" }]);
+
     const [generatedProjectId, setGeneratedProjectId] = useState("");
     const [customColor, setCustomColor] = useState("#6366f1");
 
@@ -154,34 +162,46 @@ export default function CreateProjectPage() {
 
             const project = await res.json();
 
-            // 2. Train with files and/or manual content (only if there's something to train)
-            const hasFiles = pendingFiles.length > 0;
-            const hasManualContent = formData.manualContent && formData.manualContent.trim().length > 0;
-
-            if (hasFiles || hasManualContent) {
-                const uploadFormData = new FormData();
-
-                // Add files if any
-                if (hasFiles) {
+            // 2. Train with data (Files, URL, Q&A)
+            try {
+                // Upload files if any
+                // Upload files and/or text content
+                if (pendingFiles.length > 0 || formData.manualContent.trim()) {
+                    const uploadFormData = new FormData();
                     pendingFiles.forEach(file => {
                         uploadFormData.append('file', file);
                     });
+                    if (formData.manualContent.trim()) {
+                        uploadFormData.append('text', formData.manualContent);
+                    }
+
+                    await fetch(`/api/projects/${project.id}/train`, {
+                        method: 'POST',
+                        body: uploadFormData
+                    });
                 }
 
-                // Add manual content if any
-                if (hasManualContent) {
-                    uploadFormData.append('text', formData.manualContent);
+                // Scrape URL if provided
+                if (urlInput.trim()) {
+                    await fetch(`/api/projects/${project.id}/documents/url`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: urlInput })
+                    });
                 }
 
-                const uploadRes = await fetch(`/api/projects/${project.id}/train`, {
-                    method: 'POST',
-                    body: uploadFormData
-                });
-
-                if (!uploadRes.ok) {
-                    console.error("Training failed but project created");
-                    // Continue anyway, project is created
+                // Save Q&A pairs if any
+                const validPairs = qaPairs.filter(p => p.question.trim() && p.answer.trim());
+                if (validPairs.length > 0) {
+                    await fetch(`/api/projects/${project.id}/documents/qa`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pairs: validPairs })
+                    });
                 }
+            } catch (trainError) {
+                console.error("Training failed partly or fully:", trainError);
+                // We don't block navigation, just log it
             }
 
             router.push('/dashboard');
@@ -528,57 +548,205 @@ export default function CreateProjectPage() {
                                         <span className="step-icon">🧠</span>
                                     </div>
                                     <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Train your AI</h2>
-                                    <p className="step-subtitle">Upload documents to teach your bot about your business</p>
+                                    <p className="step-subtitle">Upload documents, scrape URLs, or add Q&A to teach your bot</p>
                                 </div>
 
-                                <div
-                                    className={`upload-area ${isDragOver ? 'drag-over' : ''}`}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    style={{ cursor: 'pointer', padding: '2rem 1.5rem' }}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        multiple
-                                        className="upload-input"
-                                        onChange={handleFileUpload}
-                                        accept=".pdf,.docx,.txt,.csv,.json"
-                                        style={{ display: 'none' }}
-                                    />
-                                    <div style={{ pointerEvents: 'none' }}>
-                                        <i className="fas fa-cloud-upload-alt upload-icon"></i>
-                                        <h3 className="upload-title">Click or drag files here</h3>
-                                        <p className="upload-subtitle">Support PDF, DOCX, TXT, CSV, JSON</p>
-                                    </div>
+                                {/* Tabs */}
+                                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", borderBottom: "1px solid #e2e8f0", paddingBottom: "1rem" }}>
+                                    {[
+                                        { id: "files", label: "📤 Upload Files" },
+                                        { id: "text", label: "📝 Input Text" },
+                                        { id: "url", label: "🌐 Scrape URL" },
+                                        { id: "qa", label: "❓ Q&A Pairs" }
+                                    ].map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id as any)}
+                                            style={{
+                                                padding: "0.75rem 1.25rem",
+                                                borderRadius: "8px",
+                                                border: "none",
+                                                background: activeTab === tab.id ? "#6366f1" : "transparent",
+                                                color: activeTab === tab.id ? "white" : "#64748b",
+                                                cursor: "pointer",
+                                                fontWeight: 500,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "0.5rem",
+                                                transition: "all 0.2s"
+                                            }}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
                                 </div>
 
-                                {uploadedFiles.length > 0 && (
-                                    <div className="uploaded-files" style={{ marginTop: '0.75rem' }}>
-                                        {uploadedFiles.map((file, idx) => (
-                                            <div key={idx} className="uploaded-file">
-                                                <i className="far fa-file-alt"></i>
-                                                <span>{file.name} ({file.size})</span>
-                                                <button onClick={() => removeFile(idx)} className="btn-icon"><i className="fas fa-trash"></i></button>
+                                {/* Files Tab */}
+                                {activeTab === "files" && (
+                                    <>
+                                        <div
+                                            className={`upload-area ${isDragOver ? 'drag-over' : ''}`}
+                                            onClick={() => fileInputRef.current?.click()}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                            style={{ cursor: 'pointer', padding: '2rem 1.5rem' }}
+                                        >
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                multiple
+                                                className="upload-input"
+                                                onChange={handleFileUpload}
+                                                accept=".pdf,.docx,.txt,.csv,.json"
+                                                style={{ display: 'none' }}
+                                            />
+                                            <div style={{ pointerEvents: 'none' }}>
+                                                <i className="fas fa-cloud-upload-alt upload-icon"></i>
+                                                <h3 className="upload-title">Click or drag files here</h3>
+                                                <p className="upload-subtitle">Support PDF, DOCX, TXT, CSV, JSON</p>
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {uploadedFiles.length > 0 && (
+                                            <div className="uploaded-files" style={{ marginTop: '0.75rem' }}>
+                                                {uploadedFiles.map((file, idx) => (
+                                                    <div key={idx} className="uploaded-file">
+                                                        <i className="far fa-file-alt"></i>
+                                                        <span>{file.name} ({file.size})</span>
+                                                        <button onClick={() => removeFile(idx)} className="btn-icon"><i className="fas fa-trash"></i></button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Text Tab */}
+                                {activeTab === "text" && (
+                                    <div style={{ background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "2rem" }}>
+                                        <h3 style={{ marginBottom: "0.5rem", color: "#1e293b", fontSize: "1.1rem" }}>Add Text Content</h3>
+                                        <p style={{ color: "#64748b", marginBottom: "1.5rem", fontSize: "0.95rem" }}>
+                                            Paste your FAQ, documentation, or any text content here
+                                        </p>
+                                        <textarea
+                                            value={formData.manualContent}
+                                            onChange={(e) => setFormData({ ...formData, manualContent: e.target.value })}
+                                            placeholder="Enter text to train your AI..."
+                                            style={{
+                                                width: "100%",
+                                                minHeight: "250px",
+                                                padding: "1rem",
+                                                borderRadius: "8px",
+                                                border: "1px solid #e2e8f0",
+                                                resize: "vertical",
+                                                fontFamily: "inherit"
+                                            }}
+                                        />
                                     </div>
                                 )}
 
-                                <button onClick={() => setShowManualInput(!showManualInput)} className="btn btn-secondary" style={{ marginTop: '1rem', width: '100%' }}>
-                                    <i className={`fas ${showManualInput ? 'fa-minus' : 'fa-plus'}`}></i> {showManualInput ? "Hide Manual Input" : "Add Text Manually"}
-                                </button>
+                                {/* URL Tab */}
+                                {activeTab === "url" && (
+                                    <div style={{ background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "2rem" }}>
+                                        <h3 style={{ marginBottom: "0.5rem", color: "#1e293b", fontSize: "1.1rem" }}>Scrape Content from URL</h3>
+                                        <p style={{ color: "#64748b", marginBottom: "1.5rem", fontSize: "0.95rem" }}>
+                                            Enter a webpage URL and we'll extract the text content automatically
+                                        </p>
+                                        <input
+                                            type="url"
+                                            value={urlInput}
+                                            onChange={(e) => setUrlInput(e.target.value)}
+                                            placeholder="https://example.com/faq"
+                                            style={{
+                                                width: "100%",
+                                                padding: "1rem",
+                                                borderRadius: "8px",
+                                                border: "1px solid #e2e8f0",
+                                                fontSize: "1rem"
+                                            }}
+                                        />
+                                    </div>
+                                )}
 
-                                {showManualInput && (
-                                    <div className="form-group" style={{ marginTop: '1rem' }}>
-                                        <textarea
-                                            className="form-textarea large"
-                                            placeholder="Paste your FAQ or documentation text here..."
-                                            value={formData.manualContent}
-                                            onChange={(e) => setFormData({ ...formData, manualContent: e.target.value })}
-                                        ></textarea>
+                                {/* Q&A Tab */}
+                                {activeTab === "qa" && (
+                                    <div style={{ background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "1.5rem" }}>
+                                        <h3 style={{ marginBottom: "0.5rem", color: "#1e293b", fontSize: "1.1rem" }}>Add Q&A Pairs</h3>
+                                        <p style={{ color: "#64748b", marginBottom: "1.5rem", fontSize: "0.95rem" }}>
+                                            Structured Q&A pairs for FAQs
+                                        </p>
+
+                                        {qaPairs.map((pair, index) => (
+                                            <div key={index} style={{
+                                                background: "white",
+                                                borderRadius: "8px",
+                                                padding: "1rem",
+                                                marginBottom: "1rem",
+                                                border: "1px solid #e2e8f0"
+                                            }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                                                    <span style={{ fontWeight: 600, color: "#1e293b" }}>Q&A #{index + 1}</span>
+                                                    {qaPairs.length > 1 && (
+                                                        <button
+                                                            onClick={() => setQaPairs(qaPairs.filter((_, i) => i !== index))}
+                                                            style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer" }}
+                                                        >
+                                                            <i className="fas fa-times"></i>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={pair.question}
+                                                    onChange={(e) => {
+                                                        const newPairs = [...qaPairs];
+                                                        newPairs[index].question = e.target.value;
+                                                        setQaPairs(newPairs);
+                                                    }}
+                                                    placeholder="Question..."
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "0.75rem",
+                                                        borderRadius: "6px",
+                                                        border: "1px solid #e2e8f0",
+                                                        marginBottom: "0.5rem"
+                                                    }}
+                                                />
+                                                <textarea
+                                                    value={pair.answer}
+                                                    onChange={(e) => {
+                                                        const newPairs = [...qaPairs];
+                                                        newPairs[index].answer = e.target.value;
+                                                        setQaPairs(newPairs);
+                                                    }}
+                                                    placeholder="Answer..."
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "0.75rem",
+                                                        borderRadius: "6px",
+                                                        border: "1px solid #e2e8f0",
+                                                        minHeight: "80px",
+                                                        resize: "vertical"
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => setQaPairs([...qaPairs, { question: "", answer: "" }])}
+                                            style={{
+                                                background: "transparent",
+                                                border: "2px dashed #94a3b8",
+                                                borderRadius: "8px",
+                                                padding: "0.75rem",
+                                                width: "100%",
+                                                cursor: "pointer",
+                                                color: "#64748b",
+                                                fontWeight: 500
+                                            }}
+                                        >
+                                            <i className="fas fa-plus"></i> Add Another Q&A Pair
+                                        </button>
                                     </div>
                                 )}
                             </div>

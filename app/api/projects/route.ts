@@ -71,37 +71,16 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Invalid token" }, { status: 401 });
         }
 
-        // Retry logic for database connection
-        const maxRetries = 3;
-        let lastError: any = null;
-        let projects: any[] = [];
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                projects = await prisma.project.findMany({
-                    where: { ownerId: payload.userId },
-                    orderBy: { createdAt: 'desc' },
-                    include: {
-                        _count: {
-                            select: { sessions: true }
-                        }
-                    }
-                });
-                break; // Success, exit retry loop
-            } catch (dbError: any) {
-                lastError = dbError;
-                console.error(`Database query attempt ${attempt} failed:`, dbError.message);
-                if (attempt < maxRetries) {
-                    // Wait before retry (exponential backoff)
-                    await new Promise(r => setTimeout(r, attempt * 1000));
+        // Direct query - connection pooling handles retries efficiently
+        const projects = await prisma.project.findMany({
+            where: { ownerId: payload.userId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                _count: {
+                    select: { sessions: true }
                 }
             }
-        }
-
-        if (projects.length === 0 && lastError) {
-            console.error("Failed to fetch projects after retries:", lastError);
-            throw lastError;
-        }
+        });
 
         console.log(`Fetched ${projects.length} projects. Mapping data...`);
 

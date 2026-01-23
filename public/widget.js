@@ -2,66 +2,64 @@
  * Snowky Chat Widget
  * Embeddable chat widget that uses AI with customizable personality
  * 
- * Usage:
- * <script>
- *   window.SNOWKY_CONFIG = { projectId: "YOUR_PROJECT_ID" };
- * </script>
+ * Usage (modern with data attributes):
+ * <script src="https://yoursite.com/widget.js" data-project-id="YOUR_PROJECT_ID" defer></script>
+ * 
+ * Usage (legacy with config object):
+ * <script>window.SNOWKY_CONFIG = { projectId: "YOUR_PROJECT_ID" };</script>
  * <script src="https://yoursite.com/widget.js"></script>
  */
 
 (function () {
     'use strict';
 
-    // Configuration
-    const config = window.SNOWKY_CONFIG || {};
-    const projectId = config.projectId || 'default';
-    const apiBase = config.apiBase || window.location.origin;
+    // Get script element and its data attributes
+    const currentScript = document.currentScript || document.querySelector('script[src*="widget.js"]');
+    const scriptData = currentScript ? currentScript.dataset : {};
+
+    // Configuration from window.SNOWKY_CONFIG (legacy) or script data attributes (modern)
+    const legacyConfig = window.SNOWKY_CONFIG || {};
+
+    // Merge configs: script data attributes take priority over legacy config
+    const projectId = scriptData.projectId || legacyConfig.projectId || 'default';
+    const apiBase = scriptData.apiBase || legacyConfig.apiBase || window.location.origin;
 
     // Default settings (will be overridden by project settings)
     let settings = {
-        tone: 'friendly',
-        emojiUsage: 'medium',
-        botName: 'Snowky Assistant',
-        welcomeMessage: '',
-        theme: 'modern',
-        color: '#6366f1',
-        launcherColor: '#6366f1',
-        launcherShape: 'circle',
-        chatIcon: 'comment-dots'
+        tone: scriptData.tone || legacyConfig.tone || 'friendly',
+        emojiUsage: scriptData.emojiUsage || legacyConfig.emojiUsage || 'medium',
+        botName: scriptData.botName || legacyConfig.botName || 'Snowky Assistant',
+        welcomeMessage: scriptData.welcomeMessage || legacyConfig.welcomeMessage || '',
+        theme: scriptData.theme || legacyConfig.theme || 'modern',
+        color: scriptData.primaryColor || scriptData.color || legacyConfig.color || '#6366f1',
+        launcherColor: scriptData.launcherColor || legacyConfig.launcherColor || '#6366f1',
+        launcherShape: scriptData.launcherShape || legacyConfig.launcherShape || 'circle',
+        chatIcon: scriptData.chatIcon || legacyConfig.chatIcon || 'comment-dots'
     };
 
     // Chat state
     let isOpen = false;
     let messages = [];
 
+
     // Load project settings from config and localStorage
     function loadSettings() {
-        // First, apply settings from SNOWKY_CONFIG (embed snippet)
-        if (config.tone) settings.tone = config.tone;
-        if (config.emojiUsage) settings.emojiUsage = config.emojiUsage;
-        if (config.botName) settings.botName = config.botName;
-        if (config.welcomeMessage) settings.welcomeMessage = config.welcomeMessage;
-        if (config.theme) settings.theme = config.theme;
-        if (config.color) settings.color = config.color;
-        if (config.launcherColor) settings.launcherColor = config.launcherColor;
-        if (config.launcherShape) settings.launcherShape = config.launcherShape;
-        if (config.chatIcon) settings.chatIcon = config.chatIcon;
-
-        // Fall back to localStorage if settings not in config
+        // Settings are already initialized from script data attributes and legacyConfig
+        // Now check localStorage for any additional project-specific settings
         try {
             const projects = JSON.parse(localStorage.getItem('snowkyProjects') || '[]');
             const project = projects.find(p => p.id === projectId);
             if (project) {
-                // Only apply localStorage settings if not already set by config
-                if (!config.tone && project.tone) settings.tone = project.tone;
-                if (!config.emojiUsage && project.emojiUsage) settings.emojiUsage = project.emojiUsage;
-                if (!config.botName && project.botName) settings.botName = project.botName;
-                if (!config.welcomeMessage && project.welcomeMessage) settings.welcomeMessage = project.welcomeMessage;
-                if (!config.theme && project.theme) settings.theme = project.theme;
-                if (!config.color && project.color) settings.color = project.color;
-                if (!config.launcherColor && project.launcherColor) settings.launcherColor = project.launcherColor;
-                if (!config.launcherShape && project.launcherShape) settings.launcherShape = project.launcherShape;
-                if (!config.chatIcon && project.chatIcon) settings.chatIcon = project.chatIcon;
+                // Only apply localStorage settings if not already set by script data or legacyConfig
+                if (!scriptData.tone && !legacyConfig.tone && project.tone) settings.tone = project.tone;
+                if (!scriptData.emojiUsage && !legacyConfig.emojiUsage && project.emojiUsage) settings.emojiUsage = project.emojiUsage;
+                if (!scriptData.botName && !legacyConfig.botName && project.botName) settings.botName = project.botName;
+                if (!scriptData.welcomeMessage && !legacyConfig.welcomeMessage && project.welcomeMessage) settings.welcomeMessage = project.welcomeMessage;
+                if (!scriptData.theme && !legacyConfig.theme && project.theme) settings.theme = project.theme;
+                if (!scriptData.primaryColor && !scriptData.color && !legacyConfig.color && project.color) settings.color = project.color;
+                if (!scriptData.launcherColor && !legacyConfig.launcherColor && project.launcherColor) settings.launcherColor = project.launcherColor;
+                if (!scriptData.launcherShape && !legacyConfig.launcherShape && project.launcherShape) settings.launcherShape = project.launcherShape;
+                if (!scriptData.chatIcon && !legacyConfig.chatIcon && project.chatIcon) settings.chatIcon = project.chatIcon;
             }
         } catch (e) {
             console.warn('Snowky: Could not load project settings from localStorage', e);
@@ -69,6 +67,7 @@
 
         console.log('Snowky settings loaded:', settings);
     }
+
 
     // Get welcome message based on settings
     function getWelcomeMessage() {
@@ -363,13 +362,13 @@
         if (typing) typing.remove();
     }
 
-    // Send message to API
+    // Send message to API with streaming
     async function sendMessage(userMessage) {
         addMessage(userMessage, true);
         showTyping();
 
         try {
-            const response = await fetch(`${apiBase}/api/chat`, {
+            const response = await fetch(`${apiBase}/api/chat/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -383,12 +382,57 @@
                 })
             });
 
-            hideTyping();
-
             if (!response.ok) throw new Error('API request failed');
 
-            const data = await response.json();
-            addMessage(data.content);
+            // Hide typing and create message bubble for streaming
+            hideTyping();
+            const messagesContainer = document.getElementById('snowky-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'snowky-message bot';
+            messageDiv.textContent = '';
+            messagesContainer.appendChild(messageDiv);
+
+            // Read streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.chunk) {
+                                fullContent += data.chunk;
+                                messageDiv.textContent = fullContent;
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            }
+                            if (data.done) {
+                                // Streaming complete
+                                messages.push({ role: 'assistant', content: fullContent });
+                            }
+                            if (data.error) {
+                                console.error('Stream error:', data.error);
+                                messageDiv.textContent = "Sorry, I encountered an error. Please try again.";
+                                messages.push({ role: 'assistant', content: messageDiv.textContent });
+                            }
+                        } catch (e) {
+                            // Ignore parse errors for incomplete chunks
+                        }
+                    }
+                }
+            }
+
+            // Ensure message is added to history if not already
+            if (!messages.find(m => m.content === fullContent && m.role === 'assistant')) {
+                messages.push({ role: 'assistant', content: fullContent });
+            }
 
         } catch (error) {
             hideTyping();

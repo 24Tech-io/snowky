@@ -8,8 +8,10 @@ if (typeof DOMMatrix === 'undefined') {
     (global as any).DOMMatrix = class DOMMatrix { };
 }
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const pdf = require("pdf-parse");
 const mammoth = require("mammoth");
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 export async function POST(
     req: Request,
@@ -118,6 +120,25 @@ export async function POST(
         } catch (embeddingError: any) {
             console.error("Embedding generation failed (continuing with raw text only):", embeddingError.message);
             embeddingWarning = "Embedding failed, using raw text fallback. " + embeddingError.message;
+
+            // Update status to failed
+            await prisma.document.update({
+                where: { id: document.id },
+                data: {
+                    embeddingStatus: "failed",
+                    embeddingError: embeddingError.message
+                }
+            });
+        }
+
+        // If no error, update to complete
+        if (!embeddingWarning) {
+            await prisma.document.update({
+                where: { id: document.id },
+                data: {
+                    embeddingStatus: "complete"
+                }
+            });
         }
 
         return NextResponse.json({
@@ -129,9 +150,17 @@ export async function POST(
         });
 
     } catch (error: any) {
-        console.error("Training Error:", error);
+        console.error("Training Error Details:", {
+            message: error.message,
+            stack: error.stack,
+            projectId: (await params).id
+        });
         return NextResponse.json(
-            { error: "Failed to train data", details: error.message },
+            {
+                error: "Failed to train data",
+                details: error.message,
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            },
             { status: 500 }
         );
     }

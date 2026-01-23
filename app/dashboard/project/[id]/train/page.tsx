@@ -139,14 +139,15 @@ export default function TrainPage({ params }: { params: Promise<{ id: string }> 
 
                             <div
                                 style={{
-                                    border: '2px dashed var(--gray-300)',
+                                    border: `2px dashed ${isTraining ? 'var(--primary)' : 'var(--gray-300)'}`,
                                     borderRadius: '12px',
                                     padding: '3rem 2rem',
                                     textAlign: 'center',
-                                    background: '#f9fafb',
-                                    cursor: 'pointer'
+                                    background: isTraining ? '#eff6ff' : '#f9fafb',
+                                    cursor: isTraining ? 'wait' : 'pointer',
+                                    transition: 'all 0.2s ease'
                                 }}
-                                onClick={() => document.getElementById('fileInput')?.click()}
+                                onClick={() => !isTraining && document.getElementById('fileInput')?.click()}
                             >
                                 <input
                                     type="file"
@@ -154,26 +155,37 @@ export default function TrainPage({ params }: { params: Promise<{ id: string }> 
                                     accept=".pdf,.docx,.txt,.md"
                                     style={{ display: 'none' }}
                                     onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    disabled={isTraining}
                                 />
-                                <i className="fas fa-cloud-upload-alt" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '1rem' }}></i>
-                                {file ? (
-                                    <div>
-                                        <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>{file.name}</p>
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>{(file.size / 1024).toFixed(1)} KB</p>
-                                        <button
-                                            type="button"
-                                            className="btn btn-ghost"
-                                            style={{ color: '#ef4444', marginTop: '1rem' }}
-                                            onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                                        >
-                                            Remove File
-                                        </button>
+                                {isTraining ? (
+                                    <div style={{ color: 'var(--primary)' }}>
+                                        <i className="fas fa-circle-notch fa-spin" style={{ fontSize: '3rem', marginBottom: '1rem' }}></i>
+                                        <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Uploading & Processing...</p>
+                                        <p style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>Please wait while we analyze your document</p>
                                     </div>
                                 ) : (
-                                    <div>
-                                        <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Click to upload file</p>
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>PDF, DOCX, TXT</p>
-                                    </div>
+                                    <>
+                                        <i className="fas fa-cloud-upload-alt" style={{ fontSize: '3rem', color: 'var(--primary)', marginBottom: '1rem' }}></i>
+                                        {file ? (
+                                            <div>
+                                                <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>{file.name}</p>
+                                                <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>{(file.size / 1024).toFixed(1)} KB</p>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-ghost"
+                                                    style={{ color: '#ef4444', marginTop: '1rem' }}
+                                                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                                                >
+                                                    Remove File
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <p style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Click to upload file</p>
+                                                <p style={{ fontSize: '0.9rem', color: 'var(--gray-500)' }}>PDF, DOCX, TXT</p>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -184,10 +196,11 @@ export default function TrainPage({ params }: { params: Promise<{ id: string }> 
                             type="submit"
                             className="btn btn-primary"
                             disabled={isTraining || (activeTab === 'text' ? !text.trim() : !file)}
+                            style={{ minWidth: '140px' }}
                         >
                             {isTraining ? (
                                 <>
-                                    <i className="fas fa-spinner fa-spin"></i> Processing...
+                                    <i className="fas fa-spinner fa-spin"></i> {activeTab === 'file' ? 'Uploading...' : 'Processing...'}
                                 </>
                             ) : (
                                 <>

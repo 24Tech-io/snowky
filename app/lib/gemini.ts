@@ -4,14 +4,14 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = process.env.GEMINI_API_KEY || "";
 
 if (!apiKey) {
-    console.error("WARNNG: GEMINI_API_KEY is not set in environment variables.");
+    console.error("WARNING: GEMINI_API_KEY is not set in environment variables.");
 }
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
+// Use gemini-2.0-flash-exp - the only model detected as available for this key
 export const geminiModel = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    // Optional: Add safety settings here
+    model: "gemini-2.0-flash-exp",
 });
 
 export const embeddingModel = genAI.getGenerativeModel({

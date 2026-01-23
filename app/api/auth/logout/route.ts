@@ -7,7 +7,8 @@ export async function POST() {
         cookieStore.delete("token");
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Logout Error:", error);
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
