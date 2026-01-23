@@ -67,9 +67,11 @@ export default function ProjectManagePage({ params }: { params: Promise<{ id: st
                     const data = await res.json();
                     interface DocumentStat { type: string; }
                     const docs: DocumentStat[] = data.documents || [];
+                    // Count files: any type that is NOT 'url', 'qa', or 'text' is a file (PDFs have MIME types like 'application/pdf')
+                    const fileCount = docs.filter((d) => d.type !== 'url' && d.type !== 'qa' && d.type !== 'text').length;
                     setDocStats({
                         total: docs.length,
-                        files: docs.filter((d) => d.type === 'file' || (d.type !== 'url' && d.type !== 'qa' && d.type !== 'text')).length,
+                        files: fileCount,
                         text: docs.filter((d) => d.type === 'text').length,
                         urls: docs.filter((d) => d.type === 'url').length,
                         qa: docs.filter((d) => d.type === 'qa').length,
