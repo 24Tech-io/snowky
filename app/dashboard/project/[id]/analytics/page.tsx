@@ -42,129 +42,90 @@ export default function AnalyticsPage() {
         fetchAnalytics();
     }, [projectId]);
 
-    const StatCard = ({ title, value, subtitle, icon, color }: {
-        title: string;
-        value: string | number;
-        subtitle?: string;
-        icon: string;
-        color: string;
-    }) => (
-        <div style={{
-            background: "white",
-            borderRadius: "16px",
-            padding: "1.5rem",
-            border: "1px solid #e2e8f0",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
-        }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                <div style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "12px",
-                    background: `${color}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.5rem"
-                }}>
-                    {icon}
-                </div>
-            </div>
-            <div style={{ fontSize: "2rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.25rem" }}>
-                {value}
-            </div>
-            <div style={{ color: "#64748b", fontSize: "0.9rem" }}>{title}</div>
-            {subtitle && <div style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem" }}>{subtitle}</div>}
-        </div>
-    );
-
-
-
     return (
-        <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+        <div className="dashboard-content">
             {/* Header */}
-            <div style={{ marginBottom: "2rem" }}>
-                <Link href={`/dashboard/project/${projectId}`} style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    color: "#64748b",
-                    textDecoration: "none",
-                    fontSize: "0.9rem",
-                    marginBottom: "1rem"
-                }}>
+            <div className="mb-8">
+                <Link href={`/dashboard/project/${projectId}`} className="text-sm text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1 mb-4">
                     <i className="fas fa-arrow-left"></i> Back to Project
                 </Link>
-                <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.5rem" }}>
+                <h1 className="text-3xl font-bold text-gray-900">
                     📊 Analytics Dashboard
                 </h1>
-                <p style={{ color: "#64748b" }}>
+                <p className="text-gray-500 mt-2">
                     Insights into your AI assistant's performance
                 </p>
             </div>
 
             {loading ? (
-                <div style={{ textAlign: "center", padding: "4rem", color: "#64748b" }}>
-                    Loading analytics...
+                <div className="text-center py-16 text-gray-500">
+                    <i className="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Loading analytics...</p>
                 </div>
             ) : error ? (
-                <div style={{ textAlign: "center", padding: "4rem", color: "#ef4444" }}>
-                    Error: {error}
+                <div className="text-center py-16 text-red-500">
+                    <i className="fas fa-exclamation-circle text-2xl mb-2"></i>
+                    <p>Error: {error}</p>
                 </div>
             ) : analytics ? (
                 <>
                     {/* Key Metrics */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
-                            <div className="text-slate-400 text-sm mb-1">Active Visitors (5m)</div>
-                            <div className="text-4xl font-bold text-green-400">{analytics?.activeVisitors || 0}</div>
-                            <div className="text-xs text-green-500/50 mt-2 flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live
+                        <div className="create-card p-6 border-l-4 border-l-green-500">
+                            <div className="text-gray-500 text-sm mb-1 uppercase font-semibold">Active Visitors (5m)</div>
+                            <div className="text-4xl font-bold text-gray-900">{analytics?.activeVisitors || 0}</div>
+                            <div className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live Now
                             </div>
                         </div>
-                        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
-                            <div className="text-slate-400 text-sm mb-1">Total Page Views</div>
-                            <div className="text-4xl font-bold text-slate-900">{analytics?.totalViews || 0}</div>
+                        <div className="create-card p-6 border-l-4 border-l-blue-500">
+                            <div className="text-gray-500 text-sm mb-1 uppercase font-semibold">Total Page Views</div>
+                            <div className="text-4xl font-bold text-gray-900">{analytics?.totalViews || 0}</div>
                         </div>
                     </div>
 
                     {/* Live Event Feed */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <span className="text-blue-400">⚡</span> Recent Activity
-                        </h3>
+                    <div className="create-card">
+                        <div className="p-6 border-b border-gray-100">
+                            <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900">
+                                <i className="fas fa-bolt text-yellow-500"></i> Recent Activity
+                            </h3>
+                        </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-slate-400">
-                                <thead className="text-xs uppercase bg-slate-950/50 text-slate-500">
+                            <table className="w-full text-left text-sm text-gray-600">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-semibold">
                                     <tr>
-                                        <th className="px-4 py-3 rounded-l-lg">Time</th>
-                                        <th className="px-4 py-3">Event</th>
-                                        <th className="px-4 py-3">Visitor</th>
-                                        <th className="px-4 py-3 rounded-r-lg">Details</th>
+                                        <th className="px-6 py-4">Time</th>
+                                        <th className="px-6 py-4">Event</th>
+                                        <th className="px-6 py-4">Visitor</th>
+                                        <th className="px-6 py-4">Details</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-800/50">
+                                <tbody className="divide-y divide-gray-100">
                                     {analytics?.recentEvents?.map((evt: any) => (
-                                        <tr key={evt.id} className="hover:bg-slate-800/30 transition-colors">
-                                            <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                                        <tr key={evt.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap font-mono text-xs">
                                                 {new Date(evt.createdAt).toLocaleTimeString()}
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${evt.type === 'page_view' ? 'bg-blue-500/10 text-blue-400' :
-                                                    evt.type === 'click' ? 'bg-purple-500/10 text-purple-400' : 'bg-slate-700 text-slate-300'
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${evt.type === 'page_view' ? 'bg-blue-100 text-blue-800' :
+                                                        evt.type === 'click' ? 'bg-purple-100 text-purple-800' :
+                                                            'bg-gray-100 text-gray-800'
                                                     }`}>
                                                     {evt.type}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 font-mono text-xs">{evt.visitorId.slice(0, 8)}...</td>
-                                            <td className="px-4 py-3 max-w-xs truncate" title={JSON.stringify(evt.data)}>
+                                            <td className="px-6 py-4 font-mono text-xs text-gray-500">
+                                                {evt.visitorId.slice(0, 8)}...
+                                            </td>
+                                            <td className="px-6 py-4 max-w-xs truncate text-gray-500" title={JSON.stringify(evt.data)}>
                                                 {evt.data?.url ? new URL(evt.data.url).pathname : JSON.stringify(evt.data)}
                                             </td>
                                         </tr>
                                     ))}
                                     {(!analytics?.recentEvents || analytics.recentEvents.length === 0) && (
                                         <tr>
-                                            <td colSpan={4} className="px-4 py-8 text-center text-slate-600">
+                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
                                                 No events recorded yet.
                                             </td>
                                         </tr>

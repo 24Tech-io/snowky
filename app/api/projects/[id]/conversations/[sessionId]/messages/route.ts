@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const message = await prisma.chatMessage.create({
             data: {
                 sessionId: sessionId,
-                role: 'agent', // Human agent
+                role: 'AGENT', // Human agent
                 content,
             }
         });
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         // Better Approach: Check the last user message metadata for channel info.
         const lastUserMsg = await prisma.chatMessage.findFirst({
-            where: { sessionId: sessionId, role: 'user' },
+            where: { sessionId: sessionId, role: 'USER' },
             orderBy: { createdAt: 'desc' }
         });
 

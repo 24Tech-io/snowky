@@ -304,6 +304,53 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      {/* How It Works Section */}
+      <section className="how-it-works-section" id="how-it-works">
+        <div className="section-container">
+          <div className="section-header">
+            <div className="section-badge"><i className="fas fa-list-ol"></i> Easy Setup</div>
+            <h2 className="section-title">How It Works</h2>
+            <p className="section-subtitle">Get your functional AI chatbot in 4 simple steps.</p>
+          </div>
+          <div className="steps-container">
+            <div className="steps-line"></div>
+
+            <div className="step-card">
+              <div className="step-number">
+                <div className="step-number-inner">1</div>
+              </div>
+              <h3 className="feature-title">Create Project</h3>
+              <p className="feature-description">Sign up and name your AI assistant to get started.</p>
+            </div>
+
+            <div className="step-card">
+              <div className="step-number">
+                <div className="step-number-inner">2</div>
+              </div>
+              <h3 className="feature-title">Upload Data</h3>
+              <p className="feature-description">Upload PDFs, docs, or URLs to train your bot.</p>
+            </div>
+
+            <div className="step-card">
+              <div className="step-number">
+                <div className="step-number-inner">3</div>
+              </div>
+              <h3 className="feature-title">Customize</h3>
+              <p className="feature-description">Adjust the look, feel, and personality of your bot.</p>
+            </div>
+
+            <div className="step-card">
+              <div className="step-number">
+                <div className="step-number-inner">4</div>
+              </div>
+              <h3 className="feature-title">Embed & Chat</h3>
+              <p className="feature-description">Copy the snippet to your site and go live!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Live Preview Section (Advanced) */}
       <section className="preview-section" id="preview">
         <div className="section-container">

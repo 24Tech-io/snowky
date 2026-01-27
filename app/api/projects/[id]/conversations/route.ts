@@ -34,14 +34,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                     select: { messages: true }
                 }
             },
-            orderBy: { updatedAt: 'desc' }
+            orderBy: { lastActiveAt: 'desc' }
         });
 
         // Formatting for frontend
         const formatted = conversations.map(c => ({
             id: c.id,
             contact: c.contact,
-            lastMessageAt: c.updatedAt,
+            lastMessageAt: c.lastActiveAt,
             messageCount: c._count.messages,
             // We might want the last message snippet too, but let's keep it simple for now
         }));

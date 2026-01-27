@@ -2,13 +2,19 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
 }
+
+// ============================================
+// USER & PROJECT MANAGEMENT
+// ============================================
 
 model User {
   id               String    @id @default(uuid())
@@ -17,102 +23,340 @@ model User {
   name             String
   resetToken       String?
   resetTokenExpiry DateTime?
+  role             UserRole  @default(USER)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  
   projects         Project[]
+  sessions         WidgetSession[] @relation("AgentSessions")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  AGENT
 }
 
 model Project {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  website     String?
+  website     String?  // Mapped to domain in some contexts
   description String?
-  settings    Json      @default("{}") // AI tone, instructions
-  theme       Json      @default("{}") // Widget colors
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   ownerId     String
-  owner       User      @relation(fields: [ownerId], references: [id])
+  
+  // Relations
+  owner       User           @relation(fields: [ownerId], references: [id])
   documents   Document[]
   sessions    WidgetSession[]
   contacts    Contact[]
   tickets     Ticket[]
   events      Event[]
   channelConfigs ChannelConfig[]
+  
+  // New Settings Relation
+  settings    ProjectSettings?
 }
+
+model ProjectSettings {
+  id              String  @id @default(uuid())
+  projectId       String  @unique
+  
+  // ═══════════════════════════════════════════════════════════
+  // WIDGET APPEARANCE
+  // ═══════════════════════════════════════════════════════════
+  widgetColor           String  @default("#6366f1")
+  widgetPosition        String  @default("bottom-right") // bottom-right, bottom-left
+  widgetButtonText      String  @default("Chat with us")
+  welcomeMessage        String  @default("Hello! How can I help you today?")
+  offlineMessage        String  @default("We're currently offline. Leave a message!")
+  botName               String  @default("Snowky AI")
+  showFloatingLauncher  Boolean @default(true)
+  
+  // ═══════════════════════════════════════════════════════════
+  // AI MODEL CONFIGURATION
+  // ═══════════════════════════════════════════════════════════
+  aiEnabled             Boolean @default(true)
+  aiModel               String  @default("gemini-1.5-flash")
+  aiTemperature         Float   @default(0.7)
+  aiMaxTokens           Int     @default(1024)
+  
+  // ═══════════════════════════════════════════════════════════
+  // RAG CONFIGURATION
+  // ═══════════════════════════════════════════════════════════
+  ragTopK               Int     @default(5)
+  ragThreshold          Float   @default(0.65)
+  ragMaxContext         Int     @default(4000)
+  ragUseHybridSearch    Boolean @default(true)
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🧠 MEMORY & CONTEXT SWITCHES
+  // ═══════════════════════════════════════════════════════════
+  memoryEnabled               Boolean @default(true)   // Conversation memory within session
+  memorySummarizationEnabled  Boolean @default(true)   // Summarize long conversations
+  memoryMaxMessages           Int     @default(20)     // Max messages to remember
+  memoryCrossSessionEnabled   Boolean @default(false)  // Remember across sessions
+  
+  // ═══════════════════════════════════════════════════════════
+  // 💼 SALES & CONVERSION SWITCHES
+  // ═══════════════════════════════════════════════════════════
+  salesModeEnabled            Boolean @default(false)  // Proactive selling
+  salesAggressiveness         String  @default("subtle") // subtle, moderate, aggressive
+  leadCaptureEnabled          Boolean @default(true)   // Ask for contact info
+  leadCaptureFields           String[] @default(["email"]) // email, phone, name, company
+  leadCaptureTiming           String  @default("natural") // natural, start, end, never
+  urgencyTacticsEnabled       Boolean @default(false)  // Limited time offers
+  competitorComparisonEnabled Boolean @default(false)  // Mention competitors
+  upsellEnabled               Boolean @default(false)  // Suggest upgrades
+  crossSellEnabled            Boolean @default(false)  // Suggest related products
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🎭 PERSONALITY & TONE SWITCHES
+  // ═══════════════════════════════════════════════════════════
+  responseStyle               String  @default("friendly") // professional, friendly, casual, formal
+  useEmojis                   Boolean @default(true)
+  personalizedGreetings       Boolean @default(true)
+  proactiveEngagement         Boolean @default(false) // Bot initiates chat
+  proactiveDelaySeconds       Int     @default(30)    // Delay before proactive message
+  proactiveMessage            String  @default("Hi there! Need any help?")
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🛡️ SAFETY & BOUNDARIES SWITCHES
+  // ═══════════════════════════════════════════════════════════
+  strictKnowledgeBase         Boolean @default(true)   // Only answer from KB
+  allowGeneralKnowledge       Boolean @default(false)  // Use Gemini's general knowledge
+  autoHandoffEnabled          Boolean @default(true)   // Transfer to human
+  autoHandoffThreshold        Float   @default(0.5)    // Confidence threshold
+  sensitiveTopicDetection     Boolean @default(true)   // Detect complaints, legal
+  sensitiveTopicActions       String  @default("handoff") // handoff, flag, both
+  blockOffTopicQuestions      Boolean @default(false)  // Decline irrelevant questions
+  offTopicResponse            String  @default("I can only help with questions about our products and services.")
+  
+  // ═══════════════════════════════════════════════════════════
+  // 📊 ANALYTICS & LEARNING SWITCHES
+  // ═══════════════════════════════════════════════════════════
+  collectFeedback             Boolean @default(true)   // Thumbs up/down
+  trackUnansweredQuestions    Boolean @default(true)   // Log gaps
+  sessionRecording            Boolean @default(true)   // Store conversations
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🎯 CUSTOM PROMPTS
+  // ═══════════════════════════════════════════════════════════
+  systemPrompt                String? // Override default system prompt
+  salesPromptAddition         String? // Additional sales instructions
+  companyContext              String? // Company background info
+  
+  // ═══════════════════════════════════════════════════════════
+  // RELATIONS
+  // ═══════════════════════════════════════════════════════════
+  project                     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+// ============================================
+// DOCUMENT & EMBEDDING MANAGEMENT
+// ============================================
 
 model Document {
-  id              String      @id @default(uuid())
-  name            String
-  type            String      // pdf, docx, txt, url, qa
-  content         String      @db.Text
-  projectId       String
-  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  embeddings      Embedding[]
-  embeddingStatus String      @default("pending") // pending | processing | complete | failed
-  embeddingError  String?     @db.Text
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id          String         @id @default(uuid())
+  projectId   String
+  name        String         // Original filename or title
+  type        String         // pdf, docx, txt, url, qa (mapped to sourceType in logic)
+  content     String         @db.Text
+  
+  status      DocumentStatus @default(PENDING)
+  chunkCount  Int            @default(0)
+  tokenCount  Int            @default(0)
+  
+  metadata    Json?          // Flexible metadata
+  embeddingStatus String     @default("pending") // legacy field, kept for safety
+  embeddingError  String?    @db.Text
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  processedAt DateTime?
+  
+  // Relations
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  embeddings  Embedding[]    // Legacy relation, verify if needed
+  chunks      DocumentChunk[]
 }
 
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+model Chunk {
+  // Legacy model, likely to be replaced by DocumentChunk or aliased
+  id         String   @id @default(uuid())
+  // ...
+}
+
+// Legacy Embedding model - Consider migrating data or dropping if fresh start
 model Embedding {
   id         String   @id @default(uuid())
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  vector     Unsupported("vector(768)")? // Standard dimensions for Gemini embeddings
+  vector     Unsupported("vector(768)")? 
   content    String   @db.Text
   createdAt  DateTime @default(now())
 }
 
-model WidgetSession {
-  id        String        @id @default(uuid())
-  projectId String
-  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  visitorId String?
-  contactId String?
-  contact   Contact?      @relation(fields: [contactId], references: [id])
-  history   Json          @default("[]")
-  messages  ChatMessage[]
-  assignedTo String?       // User ID of the human agent assigned
-  rating    Int?          // 1-5 user satisfaction rating
-  resolved  Boolean?      // Did user mark as resolved?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+model DocumentChunk {
+  id          String   @id @default(uuid())
+  documentId  String
+  
+  // Content
+  content     String   @db.Text // Chunk text
+  chunkIndex  Int      // Order in document
+  
+  // Vector embedding (768 dimensions for Gemini)
+  embedding   Unsupported("vector(768)")?
+  
+  // Metadata for filtering
+  tokenCount  Int
+  metadata    Json?    // Section headers, page numbers, etc.
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@index([documentId])
 }
 
-// Chat message for analytics tracking
-// Chat message for analytics tracking
+// ============================================
+// CHAT & SESSION MANAGEMENT
+// ============================================
+
+model WidgetSession {
+  id          String        @id @default(uuid())
+  projectId   String
+  
+  // Visitor identification
+  visitorId   String        // Browser fingerprint or cookie ID
+  contactId   String?       // Linked contact if identified
+  
+  // Session state
+  status      SessionStatus @default(ACTIVE)
+  isAiMode    Boolean       @default(true) // AI or human agent
+  assignedTo  String?       // User ID of the human agent assigned, mapped to agentId
+  
+  // Context - New fields
+  currentUrl  String?
+  userAgent   String?
+  ipAddress   String?
+  
+  // History - JSON backup
+  history     Json          @default("[]")
+  
+  // Analytics
+  messageCount Int          @default(0)
+  startedAt   DateTime      @default(now())
+  lastActiveAt DateTime     @default(now())
+  endedAt     DateTime?
+  
+  // Satisfaction
+  rating      Int?          // 1-5 rating
+  feedback    String?
+  resolved    Boolean?
+  
+  // Relations
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contact     Contact?      @relation(fields: [contactId], references: [id])
+  agent       User?         @relation("AgentSessions", fields: [assignedTo], references: [id])
+  messages    ChatMessage[]
+  
+  @@index([projectId])
+  @@index([visitorId])
+  @@index([status])
+}
+
+enum SessionStatus {
+  ACTIVE
+  WAITING_AGENT
+  WITH_AGENT
+  RESOLVED
+  ABANDONED
+}
+
 model ChatMessage {
   id           String        @id @default(uuid())
   sessionId    String
-  session      WidgetSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role         String        // user | assistant | agent
+  
+  // Message content
+  role         MessageRole
   content      String        @db.Text
-  hadContext   Boolean       @default(true) // Did we find relevant docs for this message?
-  metadata     Json?         // Store channel info (whatsapp, messenger, etc.)
-  responseTime Int?          // Response time in milliseconds
-  createdAt    DateTime      @default(now())
+  
+  // AI-specific fields
+  sources      Json?       // Referenced chunk IDs
+  confidence   Float?      // AI confidence score
+  tokensUsed   Int?        // Token consumption
+  hadContext   Boolean     @default(true) // Legacy field
+  
+  // Metadata
+  metadata     Json?       // Store channel info (whatsapp, messenger, etc.)
+  responseTime Int?        // Response time in milliseconds
+  createdAt    DateTime    @default(now())
+  
+  // Relations
+  session      WidgetSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([createdAt])
 }
 
+enum MessageRole {
+  USER
+  ASSISTANT
+  AGENT
+  SYSTEM
+}
+
+// ============================================
 // CRM: Contacts
+// ============================================
+
 model Contact {
   id          String    @id @default(uuid())
   projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // Contact info
   name        String?
   email       String?
   phone       String?
-  customFields Json     @default("{}")
+  
+  // Tracking
+  visitorIds  String[] // Array of associated visitor IDs
+  
+  // Custom attributes
+  customFields Json    @default("{}") // Legacy name
+  attributes   Json?   // New name alias if needed
+  tags         String[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sessions    WidgetSession[]
   tickets     Ticket[]
   events      Event[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
+  
   @@unique([projectId, email]) // Unique email per project
+  @@index([projectId])
 }
 
-// Ticketing System
+// ============================================
+// Ticketing System (Preserved)
+// ============================================
 model Ticket {
   id          String    @id @default(uuid())
   projectId   String
@@ -137,7 +381,11 @@ model TicketComment {
   createdAt DateTime @default(now())
 }
 
-// Behavior Monitoring: Events
+// ============================================
+// Analytics & Events
+// ============================================
+
+// Legacy Event model - consider merging with AnalyticsEvent
 model Event {
   id        String   @id @default(uuid())
   projectId String
@@ -148,6 +396,20 @@ model Event {
   type      String   // page_view | button_click | custom
   data      Json     @default("{}") // url, element_id, etc.
   createdAt DateTime @default(now())
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(uuid())
+  projectId   String
+  sessionId   String?
+  
+  eventType   String   // page_view, chat_started, message_sent, etc.
+  eventData   Json?
+  
+  timestamp   DateTime @default(now())
+  
+  @@index([projectId, eventType])
+  @@index([timestamp])
 }
 
 model ChannelConfig {

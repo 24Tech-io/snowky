@@ -44,7 +44,7 @@ export async function processIncomingMessage(projectId: string, message: Incomin
             contactId: contact.id,
             resolved: false // Only open sessions
         },
-        orderBy: { updatedAt: 'desc' }
+        orderBy: { lastActiveAt: 'desc' }
     });
 
     if (!session) {
@@ -52,6 +52,7 @@ export async function processIncomingMessage(projectId: string, message: Incomin
             data: {
                 projectId,
                 contactId: contact.id,
+                visitorId: `external_${channelType}_${message.from}`, // Generate visitorId for external channels
                 history: [], // Initialize empty
             }
         });
@@ -61,7 +62,7 @@ export async function processIncomingMessage(projectId: string, message: Incomin
     const chatMessage = await prisma.chatMessage.create({
         data: {
             sessionId: session.id,
-            role: 'user',
+            role: 'USER',
             content: message.content,
             metadata: { ...message.metadata, channel: channelType, externalId: message.externalId }
         }
@@ -81,7 +82,10 @@ export async function processIncomingMessage(projectId: string, message: Incomin
         }
 
         // Get Project Settings for Bot Personality
-        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            include: { settings: true }
+        });
         const settings = (project?.settings as any) || {};
 
         // Only reply if no human agent has taken over recently? 
@@ -116,7 +120,7 @@ export async function processIncomingMessage(projectId: string, message: Incomin
             await prisma.chatMessage.create({
                 data: {
                     sessionId: session.id,
-                    role: 'assistant',
+                    role: 'ASSISTANT',
                     content: aiResponseText,
                     metadata: { channel: channelType, type: 'auto-reply' }
                 }

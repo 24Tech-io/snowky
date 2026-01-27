@@ -1,0 +1,108 @@
+
+> snowky-web@0.1.0 lint
+> eslint
+
+(node:25004) ESLintIgnoreWarning: The ".eslintignore" file is no longer supported. Switch to using the "ignores" property in "eslint.config.js": https://eslint.org/docs/latest/use/configure/migration-guide#ignoring-files
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+C:\Users\adhit\Desktop\snowky\app\api\auth\me\route.ts
+  6:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\chat\route.ts
+  68:15  warning  'aiMessage' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\chat\stream\route.ts
+  116:15  warning  'fullPrompt' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  174:29  warning  'textResponse' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\documents\process\route.ts
+  3:10  warning  'prisma' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\events\route.ts
+  34:31  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\projects\[id]\channels\route.ts
+  30:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\projects\[id]\conversations\[sessionId]\messages\route.ts
+  28:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\projects\[id]\settings\route.ts
+  17:17  warning  'id' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  17:32  warning  'pid' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\projects\[id]\train\route.ts
+  11:1  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports')
+  13:1  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports')
+
+C:\Users\adhit\Desktop\snowky\app\api\projects\route.ts
+  69:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\api\webhooks\[provider]\route.ts
+  16:15  warning  '_adapter' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\auth\login\page.tsx
+  38:18  warning  '_err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\auth\register\page.tsx
+  39:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\dashboard\create\page.tsx
+   7:11  warning  'Project' is defined but never used                 @typescript-eslint/no-unused-vars
+  66:12  warning  '_isSubmitting' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\dashboard\project\[id]\analytics\page.tsx
+  45:11  warning  'StatCard' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\dashboard\project\[id]\page.tsx
+   30:12  warning  'copied' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  135:11  warning  'copyEmbedCode' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\dashboard\project\[id]\settings\channels\page.tsx
+  58:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\app\page.tsx
+  11:19  warning  '_setBotName' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  12:26  warning  '_setWelcomeMessage' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  15:10  warning  'emojiFreq' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  15:21  warning  '_setEmojiFreq' is assigned a value but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\ai\actions.ts
+  52:45  warning  '_projectId' is defined but never used  @typescript-eslint/no-unused-vars
+  52:65  warning  '_args' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\ai\prompts\dynamic-prompt-builder.ts
+  90:13  error  'salesStrategies' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\adhit\Desktop\snowky\lib\ai\rag\context-builder.ts
+  30:11  warning  'settings' is defined but never used                     @typescript-eslint/no-unused-vars
+  37:13  error    'contextParts' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\adhit\Desktop\snowky\lib\ai\rag\orchestrator.ts
+  2:10  warning  'processDocumentBatch' is defined but never used  @typescript-eslint/no-unused-vars
+  6:34  warning  'multiQueryRetrieval' is defined but never used   @typescript-eslint/no-unused-vars
+  7:10  warning  'ProjectSettings' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\auth.ts
+  21:14  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\channels\instagram.ts
+   5:32  warning  '_config' is defined but never used  @typescript-eslint/no-unused-vars
+  10:36  warning  'config' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\channels\messenger.ts
+   5:32  warning  '_config' is defined but never used  @typescript-eslint/no-unused-vars
+  11:36  warning  '_config' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\channels\whatsapp.ts
+  17:36  warning  '_config' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\documents\parser.ts
+  51:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\adhit\Desktop\snowky\lib\documents\processor.ts
+  4:25  warning  'DocumentSource' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 42 problems (2 errors, 40 warnings)
+  2 errors and 2 warnings potentially fixable with the `--fix` option.
+

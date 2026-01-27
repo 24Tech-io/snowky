@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProjectSettings } from "@prisma/client";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
@@ -21,30 +22,37 @@ export async function POST(req: Request) {
         // Extract top-level fields
         const { name, description, ...rest } = body;
 
-        // Separate settings and theme from the rest of the body
-        const settings = {
-            tone: rest.tone,
-            emojiUsage: rest.emojiUsage,
-            botName: rest.botName,
-            welcomeMessage: rest.welcomeMessage,
-            status: "Active", // Store status in settings
-        };
-
-        const theme = {
-            theme: rest.theme,
-            color: rest.color,
-            launcherColor: rest.launcherColor,
-            launcherShape: rest.launcherShape,
-            chatIcon: rest.chatIcon,
-        };
-
+        // Create the project with related settings
+        // We map the flat "rest" fields to our ProjectSettings schema
         const project = await prisma.project.create({
             data: {
                 name: name || "Untitled Project",
                 description: description || "",
                 ownerId: payload.userId,
-                settings: settings,
-                theme: theme,
+                settings: {
+                    create: {
+                        // General Widget Settings
+                        botName: rest.botName || "Snowky AI",
+                        showFloatingLauncher: rest.showFloatingLauncher ?? true,
+                        welcomeMessage: rest.welcomeMessage || "Hello! How can I help you?",
+                        // status: "Active", // Not in schema
+
+                        // Theme Settings
+                        // widgetTheme: rest.theme || "modern", // Not in schema
+                        widgetColor: rest.color || "#6366f1",
+                        // widgetIcon: rest.chatIcon, // Not in schema
+
+                        // AI Configuration
+                        // memoryType: rest.memoryType || "conversation", // Not in schema. Default memoryEnabled is true.
+
+                        // Personality
+                        responseStyle: rest.tone || "friendly",
+                        // emojiUsage: rest.emojiUsage || "medium", // Not in schema. Default useEmojis is true.
+
+                        // Sales
+                        // salesMode: rest.salesMode || "informational", // Not in schema. Default salesModeEnabled is false.
+                    }
+                }
             }
         });
 
@@ -71,11 +79,12 @@ export async function GET(_req: Request) {
             return NextResponse.json({ error: "Invalid token" }, { status: 401 });
         }
 
-        // Direct query - connection pooling handles retries efficiently
+        // Fetch projects with their settings
         const projects = await prisma.project.findMany({
             where: { ownerId: payload.userId },
             orderBy: { createdAt: 'desc' },
             include: {
+                settings: true, // Include the settings relation
                 _count: {
                     select: { sessions: true }
                 }
@@ -87,21 +96,31 @@ export async function GET(_req: Request) {
         // Transform for frontend
         const formattedProjects = projects.map(p => {
             try {
-                const settings = (p.settings as any) || {};
-                const theme = (p.theme as any) || {};
+                const settings: Partial<ProjectSettings> = p.settings || {};
                 const sessionCount = p._count?.sessions || 0;
 
                 return {
                     id: p.id,
                     name: p.name || "Untitled",
                     description: p.description || "",
-                    status: settings.status || "Active",
-                    tone: settings.tone || "friendly",
-                    color: theme.color || "#6366f1",
-                    theme: theme.theme || "modern",
-                    messages: sessionCount * 5,
+
+                    // Flatten settings back to frontend format
+                    status: (settings as any).status || "Active",
+                    tone: settings.responseStyle || "friendly",
+                    color: settings.widgetColor || "#6366f1",
+                    theme: "modern",
+
+                    messages: sessionCount * 5, // Mock metric or real if available
                     satisfaction: "100%",
-                    createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString()
+                    createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString(),
+
+                    // Extra fields
+                    botName: settings.botName,
+                    welcomeMessage: settings.welcomeMessage,
+                    showFloatingLauncher: settings.showFloatingLauncher ?? true,
+                    // widgetTheme: settings.widgetTheme, // Not in schema
+                    widgetColor: settings.widgetColor,
+                    // widgetIcon: settings.widgetIcon // Not in schema
                 };
             } catch (mapError) {
                 console.error("Error mapping project:", p.id, mapError);

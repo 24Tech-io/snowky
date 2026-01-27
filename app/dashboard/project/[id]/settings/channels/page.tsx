@@ -20,7 +20,6 @@ export default function ChannelSettingsPage() {
         fetch(`/api/projects/${projectId}/channels`)
             .then(res => res.json())
             .then(data => {
-                // Find configs
                 const wa = data.find((c: any) => c.type === 'whatsapp');
                 if (wa) {
                     setConfig(wa.config || {});
@@ -50,7 +49,7 @@ export default function ChannelSettingsPage() {
                 body: JSON.stringify({
                     type,
                     config: currentConfig,
-                    enabled: true // Always enable on save for now
+                    enabled: true
                 })
             });
             if (res.ok) alert(`${type} Saved successfully!`);
@@ -61,86 +60,85 @@ export default function ChannelSettingsPage() {
         setSaving(false);
     };
 
-    if (loading) return <div className="p-8 text-white">Loading...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-8 font-sans">
+        <div className="dashboard-content">
             <div className="max-w-4xl mx-auto">
                 <header className="mb-8 flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                             Channel Integrations
                         </h1>
-                        <p className="text-slate-400 mt-2">Connect your messaging accounts</p>
+                        <p className="text-gray-500 mt-2">Connect your messaging accounts</p>
                     </div>
-                    <Link href={`/dashboard/project/${projectId}`} className="text-sm text-slate-400 hover:text-white transition-colors">
-                        ← Back to Dashboard
+                    <Link href={`/dashboard/project/${projectId}`} className="text-sm text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1">
+                        <i className="fas fa-arrow-left"></i> Back to Dashboard
                     </Link>
                 </header>
 
                 <div className="grid gap-8">
                     {/* WhatsApp Card */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                    <div className="create-card p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center border border-green-500/20">
-                                    <span className="text-2xl">📱</span>
+                                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center text-2xl">
+                                    <i className="fab fa-whatsapp"></i>
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-semibold text-white">WhatsApp Cloud API</h2>
-                                    <p className="text-sm text-slate-400">Identify users by Phone Number</p>
+                                    <h2 className="text-xl font-semibold text-gray-900">WhatsApp Cloud API</h2>
+                                    <p className="text-sm text-gray-500">Identify users by Phone Number</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="sr-only peer" />
-                                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                    <span className="ml-3 text-sm font-medium text-slate-300">{enabled ? 'Active' : 'Disabled'}</span>
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                    <span className="ml-3 text-sm font-medium text-gray-600">{enabled ? 'Active' : 'Disabled'}</span>
                                 </label>
                             </div>
                         </div>
 
                         <div className="space-y-4">
-                            {/* ... WhatsApp fields ... */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Phone Number ID</label>
+                                <label className="form-label">Phone Number ID</label>
                                 <input
                                     type="text"
                                     value={config.phoneNumberId || ''}
                                     onChange={e => setConfig({ ...config, phoneNumberId: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="e.g. 100000000000"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Access Token (Permanent)</label>
+                                <label className="form-label">Access Token (Permanent)</label>
                                 <input
                                     type="password"
                                     value={config.accessToken || ''}
                                     onChange={e => setConfig({ ...config, accessToken: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="EAAG..."
                                 />
-                                <p className="text-xs text-slate-500 mt-1">Get this from the Meta Developer Dashboard.</p>
+                                <p className="text-xs text-gray-500 mt-1">Get this from the Meta Developer Dashboard.</p>
                             </div>
 
-                            {/* Webhook Info for WhatsApp */}
-                            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mt-6">
-                                <h3 className="text-sm font-semibold text-blue-400 mb-2">Webhook Setup</h3>
+                            {/* Webhook Info */}
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg mt-6">
+                                <h3 className="text-sm font-semibold text-blue-700 mb-2">Webhook Setup</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs text-slate-400 uppercase tracking-wider">Callback URL</label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <code className="bg-slate-950 px-2 py-1 rounded text-xs text-slate-300 flex-1 overflow-auto">
+                                        <label className="text-xs text-gray-500 uppercase tracking-wider">Callback URL</label>
+                                        <div className="mt-1">
+                                            <code className="bg-white border border-gray-200 px-2 py-1 rounded text-xs text-gray-700 block overflow-auto">
                                                 {typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/whatsapp` : '/api/webhooks/whatsapp'}
                                             </code>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-slate-400 uppercase tracking-wider">Verify Token</label>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <code className="bg-slate-950 px-2 py-1 rounded text-xs text-slate-300 flex-1">
+                                        <label className="text-xs text-gray-500 uppercase tracking-wider">Verify Token</label>
+                                        <div className="mt-1">
+                                            <code className="bg-white border border-gray-200 px-2 py-1 rounded text-xs text-gray-700 block">
                                                 snowky_verify_token
                                             </code>
                                         </div>
@@ -152,7 +150,7 @@ export default function ChannelSettingsPage() {
                                 <button
                                     onClick={() => handleSave('whatsapp')}
                                     disabled={saving}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    className="btn btn-primary"
                                 >
                                     {saving ? 'Saving...' : 'Save WhatsApp'}
                                 </button>
@@ -161,34 +159,34 @@ export default function ChannelSettingsPage() {
                     </div>
 
                     {/* Messenger Card */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                    <div className="create-card p-6">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
-                                <span className="text-2xl">💬</span>
+                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl">
+                                <i className="fab fa-facebook-messenger"></i>
                             </div>
                             <div>
-                                <h2 className="text-xl font-semibold text-white">Facebook Messenger</h2>
-                                <p className="text-sm text-slate-400">Connect a Facebook Page</p>
+                                <h2 className="text-xl font-semibold text-gray-900">Facebook Messenger</h2>
+                                <p className="text-sm text-gray-500">Connect a Facebook Page</p>
                             </div>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Page ID</label>
+                                <label className="form-label">Page ID</label>
                                 <input
                                     type="text"
                                     value={msgsConfig.pageId || ''}
                                     onChange={e => setMsgsConfig({ ...msgsConfig, pageId: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="Page ID"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Page Access Token</label>
+                                <label className="form-label">Page Access Token</label>
                                 <input
                                     type="password"
                                     value={msgsConfig.accessToken || ''}
                                     onChange={e => setMsgsConfig({ ...msgsConfig, accessToken: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="EAA..."
                                 />
                             </div>
@@ -196,7 +194,7 @@ export default function ChannelSettingsPage() {
                                 <button
                                     onClick={() => handleSave('messenger')}
                                     disabled={saving}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    className="btn btn-primary"
                                 >
                                     Save Messenger
                                 </button>
@@ -205,34 +203,34 @@ export default function ChannelSettingsPage() {
                     </div>
 
                     {/* Instagram Card */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                    <div className="create-card p-6">
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-12 bg-pink-500/10 rounded-xl flex items-center justify-center border border-pink-500/20">
-                                <span className="text-2xl">📸</span>
+                            <div className="w-12 h-12 bg-pink-100 text-pink-600 rounded-xl flex items-center justify-center text-2xl">
+                                <i className="fab fa-instagram"></i>
                             </div>
                             <div>
-                                <h2 className="text-xl font-semibold text-white">Instagram</h2>
-                                <p className="text-sm text-slate-400">Connect an Instagram Business Account</p>
+                                <h2 className="text-xl font-semibold text-gray-900">Instagram</h2>
+                                <p className="text-sm text-gray-500">Connect an Instagram Business Account</p>
                             </div>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Instagram Account ID (or Page ID linked)</label>
+                                <label className="form-label">Instagram Account ID</label>
                                 <input
                                     type="text"
                                     value={igConfig.instagramId || ''}
                                     onChange={e => setIgConfig({ ...igConfig, instagramId: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="IG Account ID"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Access Token</label>
+                                <label className="form-label">Access Token</label>
                                 <input
                                     type="password"
                                     value={igConfig.accessToken || ''}
                                     onChange={e => setIgConfig({ ...igConfig, accessToken: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="form-input"
                                     placeholder="EAA..."
                                 />
                             </div>
@@ -240,7 +238,7 @@ export default function ChannelSettingsPage() {
                                 <button
                                     onClick={() => handleSave('instagram')}
                                     disabled={saving}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    className="btn btn-primary"
                                 >
                                     Save Instagram
                                 </button>

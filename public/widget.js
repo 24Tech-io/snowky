@@ -34,7 +34,8 @@
         color: scriptData.primaryColor || scriptData.color || legacyConfig.color || '#6366f1',
         launcherColor: scriptData.launcherColor || legacyConfig.launcherColor || '#6366f1',
         launcherShape: scriptData.launcherShape || legacyConfig.launcherShape || 'circle',
-        chatIcon: scriptData.chatIcon || legacyConfig.chatIcon || 'comment-dots'
+        chatIcon: scriptData.chatIcon || legacyConfig.chatIcon || 'comment-dots',
+        showFloatingLauncher: scriptData.showFloatingLauncher !== 'false' && (legacyConfig.showFloatingLauncher !== false)
     };
 
     // Chat state
@@ -60,6 +61,10 @@
                 if (!scriptData.launcherColor && !legacyConfig.launcherColor && project.launcherColor) settings.launcherColor = project.launcherColor;
                 if (!scriptData.launcherShape && !legacyConfig.launcherShape && project.launcherShape) settings.launcherShape = project.launcherShape;
                 if (!scriptData.chatIcon && !legacyConfig.chatIcon && project.chatIcon) settings.chatIcon = project.chatIcon;
+
+                if (project.showFloatingLauncher !== undefined) {
+                    settings.showFloatingLauncher = project.showFloatingLauncher;
+                }
             }
         } catch (e) {
             console.warn('Snowky: Could not load project settings from localStorage', e);
@@ -141,6 +146,7 @@
                 box-shadow: 0 8px 25px ${settings.launcherColor}40;
                 transition: all 0.3s ease;
                 z-index: 999999;
+                ${!settings.showFloatingLauncher ? 'display: none !important;' : ''}
             }
             #snowky-launcher:hover {
                 transform: scale(1.1);
@@ -152,19 +158,18 @@
                 fill: white;
             }
             #snowky-chat-window {
-                position: fixed;
-                bottom: 100px;
-                right: 24px;
                 width: 380px;
                 max-width: calc(100vw - 48px);
-                height: 550px;
-                max-height: calc(100vh - 140px);
                 background: white;
                 display: none;
                 flex-direction: column;
                 overflow: hidden;
                 z-index: 999998;
                 animation: snowky-slide-up 0.3s ease;
+                ${settings.showFloatingLauncher ?
+                `position: fixed; bottom: 100px; right: 24px; height: 550px; max-height: calc(100vh - 140px);` :
+                `position: relative; width: 100%; height: 100%; min-height: 500px; box-shadow: none; border: 1px solid #eee; right: auto; bottom: auto;`
+            }
             }
             #snowky-chat-window.open {
                 display: flex;
@@ -308,10 +313,22 @@
 
         const container = document.createElement('div');
         container.id = 'snowky-widget-container';
+
+        // Decide where to append
+        if (settings.showFloatingLauncher) {
+            document.body.appendChild(container);
+        } else {
+            // Try to find target or append to body (user will style container)
+            const target = document.getElementById('snowky-embed') || document.body;
+            target.appendChild(container);
+            isOpen = true; // Auto open
+        }
+
         container.innerHTML = `
+            ${settings.showFloatingLauncher ? `
             <button id="snowky-launcher" aria-label="Open chat">
                 <svg viewBox="0 0 24 24"><path d="M12 3c5.5 0 10 3.58 10 8s-4.5 8-10 8c-1.24 0-2.43-.18-3.53-.5C5.55 21 2 21 2 21c2.33-2.33 2.7-3.9 2.75-4.5C3.05 15.07 2 13.13 2 11c0-4.42 4.5-8 10-8z"/></svg>
-            </button>
+            </button>` : ''}
             <div id="snowky-chat-window" style="${styleStr}">
                 <div id="snowky-header">
                     <div id="snowky-avatar">🐻‍❄️</div>
@@ -330,7 +347,13 @@
                 </div>
             </div>
         `;
-        document.body.appendChild(container);
+        if (!settings.showFloatingLauncher) {
+            // Auto open
+            requestAnimationFrame(() => {
+                document.getElementById('snowky-chat-window').classList.add('open');
+                setTimeout(() => addMessage(getWelcomeMessage()), 500);
+            });
+        }
     }
 
     // Add message to chat
@@ -362,9 +385,47 @@
         if (typing) typing.remove();
     }
 
-    // Send message to API with streaming
     async function sendMessage(userMessage) {
-        // ... (existing implementation)
+        addMessage(userMessage, true);
+        showTyping();
+
+        try {
+            const vid = getVisitorId();
+            // Store session ID in local storage to maintain session across reloads
+            let sessionId = localStorage.getItem(`snowky_session_${projectId}`);
+
+            const response = await fetch(`${apiBase}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: userMessage,
+                    projectId: projectId,
+                    visitorId: vid,
+                    sessionId: sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+
+            // Save new session ID if provided
+            if (data.sessionId) {
+                localStorage.setItem(`snowky_session_${projectId}`, data.sessionId);
+            }
+
+            hideTyping();
+
+            // Add bot response
+            addMessage(data.content);
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            hideTyping();
+            addMessage("Sorry, I'm having trouble connecting right now. Please try again later.");
+        }
     }
 
     // --- Analytics Tracking ---
@@ -454,8 +515,10 @@
         initTracking();
 
         // Event listeners
-        document.getElementById('snowky-launcher').addEventListener('click', toggleChat);
-        document.getElementById('snowky-close').addEventListener('click', toggleChat);
+        if (settings.showFloatingLauncher) {
+            document.getElementById('snowky-launcher')?.addEventListener('click', toggleChat);
+            document.getElementById('snowky-close')?.addEventListener('click', toggleChat);
+        }
 
         document.getElementById('snowky-send').addEventListener('click', () => {
             const input = document.getElementById('snowky-input');

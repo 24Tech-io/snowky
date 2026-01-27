@@ -37,13 +37,13 @@ export default function InboxPage() {
     const selectedConversation = conversations?.find((c: any) => c.id === selectedSessionId);
 
     return (
-        <div className="flex h-screen bg-slate-950 text-white overflow-hidden">
+        <div className="flex h-screen bg-gray-50 text-gray-900 overflow-hidden">
             {/* Sidebar: Conversation List */}
-            <div className="w-80 border-r border-slate-800 flex flex-col bg-slate-900">
-                <div className="p-4 border-b border-slate-800">
+            <div className="w-80 border-r border-gray-200 flex flex-col bg-white">
+                <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h2 className="text-lg font-bold">Inbox</h2>
-                    <div className="text-xs text-slate-400 mt-1">
-                        {loadingConvos ? 'Loading...' : `${conversations?.length || 0} active`}
+                    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {loadingConvos ? '...' : `${conversations?.length || 0}`}
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto">
@@ -51,32 +51,40 @@ export default function InboxPage() {
                         <div
                             key={conv.id}
                             onClick={() => setSelectedSessionId(conv.id)}
-                            className={`p-4 border-b border-slate-800/50 cursor-pointer hover:bg-slate-800 transition-colors ${selectedSessionId === conv.id ? 'bg-slate-800 border-l-4 border-l-blue-500' : ''}`}
+                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedSessionId === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
                         >
                             <div className="flex justify-between mb-1">
-                                <span className="font-semibold text-sm truncate">{conv.contact?.name || 'Visitor'}</span>
-                                <span className="text-xs text-slate-500">{new Date(conv.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="font-semibold text-sm truncate text-gray-800">{conv.contact?.name || 'Visitor'}</span>
+                                <span className="text-xs text-gray-400">{new Date(conv.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
-                            <div className="text-xs text-slate-400 truncate">
+                            <div className="text-xs text-gray-500 truncate">
                                 {conv.contact?.email || conv.contact?.phone || 'Unknown'}
                             </div>
                         </div>
                     ))}
+                    {conversations?.length === 0 && (
+                        <div className="p-8 text-center text-gray-400 text-sm">
+                            No conversations yet.
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col bg-slate-950">
+            <div className="flex-1 flex flex-col bg-gray-50">
                 {selectedSessionId ? (
                     <>
                         {/* Chat Header */}
-                        <div className="h-16 border-b border-slate-800 flex items-center px-6 justify-between bg-slate-900/50 backdrop-blur">
+                        <div className="h-16 border-b border-gray-200 flex items-center px-6 justify-between bg-white shadow-sm z-10">
                             <div>
-                                <h3 className="font-bold">{selectedConversation?.contact?.name || 'Visitor'}</h3>
-                                <span className="text-xs text-slate-400">{selectedConversation?.contact?.email || selectedConversation?.contact?.phone}</span>
+                                <h3 className="font-bold text-gray-900">{selectedConversation?.contact?.name || 'Visitor'}</h3>
+                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                    <span>{selectedConversation?.contact?.email || selectedConversation?.contact?.phone}</span>
+                                    {selectedConversation?.visitorId && <span className="bg-gray-100 px-1 rounded font-mono text-[10px]">{selectedConversation.visitorId.slice(0, 8)}</span>}
+                                </div>
                             </div>
-                            <button className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded text-slate-300">
-                                Mark Resolved
+                            <button className="text-xs bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1 rounded text-gray-600 transition-colors">
+                                <i className="fas fa-check mr-1"></i> Mark Resolved
                             </button>
                         </div>
 
@@ -86,12 +94,12 @@ export default function InboxPage() {
                                 const isAgent = msg.role === 'agent' || msg.role === 'assistant';
                                 return (
                                     <div key={msg.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${isAgent
-                                                ? 'bg-blue-600 text-white rounded-br-sm'
-                                                : 'bg-slate-800 text-slate-200 rounded-bl-sm'
+                                        <div className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${isAgent
+                                            ? 'bg-blue-600 text-white rounded-br-sm'
+                                            : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm'
                                             }`}>
                                             <p className="text-sm">{msg.content}</p>
-                                            <div className="text-[10px] opacity-50 mt-1 text-right">
+                                            <div className={`text-[10px] mt-1 text-right ${isAgent ? 'text-blue-200' : 'text-gray-400'}`}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </div>
@@ -102,20 +110,20 @@ export default function InboxPage() {
                         </div>
 
                         {/* Input Area */}
-                        <div className="p-4 border-t border-slate-800 bg-slate-900">
-                            <div className="flex gap-2">
+                        <div className="p-4 border-t border-gray-200 bg-white">
+                            <div className="max-w-4xl mx-auto flex gap-2">
                                 <input
                                     type="text"
                                     value={replyText}
                                     onChange={e => setReplyText(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleSend()}
                                     placeholder="Type a reply..."
-                                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
                                 />
                                 <button
                                     onClick={handleSend}
                                     disabled={!replyText.trim()}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                                 >
                                     Send
                                 </button>
@@ -123,10 +131,10 @@ export default function InboxPage() {
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center text-slate-500">
+                    <div className="flex-1 flex items-center justify-center text-gray-400">
                         <div className="text-center">
-                            <div className="text-4xl mb-4">💬</div>
-                            <p>Select a conversation to start chatting</p>
+                            <div className="text-6xl mb-4 text-gray-200">💬</div>
+                            <p className="font-medium">Select a conversation to start chatting</p>
                         </div>
                     </div>
                 )}
@@ -134,22 +142,36 @@ export default function InboxPage() {
 
             {/* Right Sidebar: User Details (CRM) */}
             {selectedSessionId && (
-                <div className="w-72 border-l border-slate-800 bg-slate-900 p-6 hidden xl:block">
-                    <h3 className="font-bold text-slate-300 mb-4">Customer Details</h3>
-                    <div className="space-y-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto flex items-center justify-center text-2xl font-bold">
-                            {selectedConversation?.contact?.name?.[0] || 'V'}
-                        </div>
+                <div className="w-72 border-l border-gray-200 bg-white p-6 hidden xl:block">
+                    <h3 className="font-bold text-gray-900 mb-6 uppercase text-xs tracking-wider">Customer Details</h3>
+                    <div className="space-y-6">
                         <div className="text-center">
-                            <div className="font-semibold">{selectedConversation?.contact?.name}</div>
-                            <div className="text-sm text-slate-400">{selectedConversation?.contact?.email}</div>
-                        </div>
-                        <div className="pt-4 border-t border-slate-800">
-                            <div className="text-xs text-slate-500 uppercase font-semibold mb-2">Info</div>
-                            <div className="text-sm text-slate-300">
-                                <div className="flex justify-between mb-1"><span>Phone:</span> <span className="text-slate-400">{selectedConversation?.contact?.phone || '-'}</span></div>
-                                <div className="flex justify-between mb-1"><span>City:</span> <span className="text-slate-400">-</span></div>
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3 border border-blue-50">
+                                {selectedConversation?.contact?.name?.[0] || 'V'}
                             </div>
+                            <div className="font-bold text-gray-900 text-lg">{selectedConversation?.contact?.name || 'Visitor'}</div>
+                            <div className="text-sm text-gray-500">{selectedConversation?.contact?.email || 'No email'}</div>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-6 space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Phone</span>
+                                <span className="text-gray-900 font-medium">{selectedConversation?.contact?.phone || '-'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Last Active</span>
+                                <span className="text-gray-900 font-medium">{new Date(selectedConversation?.lastMessageAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Source</span>
+                                <span className="text-gray-900 font-medium capitalize">{selectedConversation?.channel || 'Web'}</span>
+                            </div>
+                        </div>
+
+                        <div className="border-t border-gray-100 pt-6">
+                            <button className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                View Full Profile
+                            </button>
                         </div>
                     </div>
                 </div>

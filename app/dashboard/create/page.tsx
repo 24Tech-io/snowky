@@ -45,7 +45,13 @@ export default function CreateProjectPage() {
         chatIcon: "fas fa-comment-dots",
         launcherColor: "#6366f1",
         launcherShape: "circle",
-        emojiUsage: "medium"
+        emojiUsage: "medium",
+        // New Advanced AI Fields
+        salesMode: "informational", // informational, soft-sell, aggressive
+        memoryType: "conversation", // session, long-term
+        leadCaptureEnabled: false,
+        competitorAnalysis: false,
+        sensitiveTopics: true,
     });
 
     const [uploadedFiles, setUploadedFiles] = useState<{ name: string, size: string }[]>([]);
@@ -66,8 +72,9 @@ export default function CreateProjectPage() {
     const steps = [
         { title: "Basic Info", step: 1 },
         { title: "Add Data", step: 2 },
-        { title: "Customize", step: 3 },
-        { title: "Get Code", step: 4 },
+        { title: "AI Intelligence", step: 3 },
+        { title: "Customize", step: 4 },
+        { title: "Get Code", step: 5 },
     ];
 
     // Extended themes with visual descriptions
@@ -103,7 +110,7 @@ export default function CreateProjectPage() {
         "#06b6d4", "#a855f7", "#1e293b"
     ];
 
-    const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
+    const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 5));
     const handlePrev = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -753,9 +760,166 @@ export default function CreateProjectPage() {
                         )
                     }
 
-                    {/* Step 3: Customize */}
+                    {/* Step 3: AI Intelligence (New) */}
                     {
                         currentStep === 3 && (
+                            <div className="create-step">
+                                <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
+                                    <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
+                                        <span className="step-icon">🤖</span>
+                                    </div>
+                                    <h2 className="step-title" style={{ fontSize: '1.5rem' }}>Configure Intelligence</h2>
+                                    <p className="step-subtitle">Define how your AI behaves, sells, and remembers.</p>
+                                </div>
+
+                                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+
+                                    {/* Sales Mode */}
+                                    <div style={{ marginBottom: '2rem', background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fas fa-store" style={{ color: '#6366f1' }}></i> Sales Strategy
+                                        </h4>
+                                        <div style={{ display: 'grid', gap: '1rem' }}>
+                                            {[
+                                                { id: 'informational', label: 'Support & Info', desc: 'Focuses on answering questions clearly', icon: 'ℹ️' },
+                                                { id: 'soft-sell', label: 'Soft Sell', desc: 'Helpful, but suggests products when relevant', icon: '🛍️' },
+                                                { id: 'aggressive', label: 'Proactive Sales', desc: 'Actively tries to convert users to customers', icon: '🔥' },
+                                            ].map(mode => (
+                                                <div
+                                                    key={mode.id}
+                                                    onClick={() => setFormData({ ...formData, salesMode: mode.id })}
+                                                    style={{
+                                                        padding: '1rem',
+                                                        borderRadius: '8px',
+                                                        border: formData.salesMode === mode.id ? '2px solid #6366f1' : '1px solid #e2e8f0',
+                                                        background: formData.salesMode === mode.id ? '#eef2ff' : 'white',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '1rem',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '1.5rem' }}>{mode.icon}</span>
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{mode.label}</div>
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{mode.desc}</div>
+                                                    </div>
+                                                    {formData.salesMode === mode.id && <i className="fas fa-check" style={{ marginLeft: 'auto', color: '#6366f1' }}></i>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Capabilities */}
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fas fa-bolt" style={{ color: '#f59e0b' }}></i> Capabilities
+                                        </h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr)', gap: '1rem' }}>
+                                            {/* Lead Capture Toggle */}
+                                            <div
+                                                onClick={() => setFormData({ ...formData, leadCaptureEnabled: !formData.leadCaptureEnabled })}
+                                                style={{
+                                                    padding: '1rem',
+                                                    borderRadius: '8px',
+                                                    border: formData.leadCaptureEnabled ? '2px solid #10b981' : '1px solid #e2e8f0',
+                                                    background: formData.leadCaptureEnabled ? '#ecfdf5' : 'white',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>Lead Capture</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Collect emails/phones</div>
+                                                </div>
+                                                <div style={{
+                                                    width: '40px', height: '24px', background: formData.leadCaptureEnabled ? '#10b981' : '#cbd5e1',
+                                                    borderRadius: '12px', position: 'relative', transition: 'all 0.2s'
+                                                }}>
+                                                    <div style={{
+                                                        width: '18px', height: '18px', background: 'white', borderRadius: '50%',
+                                                        position: 'absolute', top: '3px', left: formData.leadCaptureEnabled ? '19px' : '3px',
+                                                        transition: 'all 0.2s'
+                                                    }}></div>
+                                                </div>
+                                            </div>
+
+                                            {/* Competitor Analysis Toggle */}
+                                            <div
+                                                onClick={() => setFormData({ ...formData, competitorAnalysis: !formData.competitorAnalysis })}
+                                                style={{
+                                                    padding: '1rem',
+                                                    borderRadius: '8px',
+                                                    border: formData.competitorAnalysis ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
+                                                    background: formData.competitorAnalysis ? '#f5f3ff' : 'white',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>Competitor Analysis</div>
+                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Compare against rivals</div>
+                                                </div>
+                                                <div style={{
+                                                    width: '40px', height: '24px', background: formData.competitorAnalysis ? '#8b5cf6' : '#cbd5e1',
+                                                    borderRadius: '12px', position: 'relative', transition: 'all 0.2s'
+                                                }}>
+                                                    <div style={{
+                                                        width: '18px', height: '18px', background: 'white', borderRadius: '50%',
+                                                        position: 'absolute', top: '3px', left: formData.competitorAnalysis ? '19px' : '3px',
+                                                        transition: 'all 0.2s'
+                                                    }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Memory */}
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <h4 style={{ marginBottom: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <i className="fas fa-memory" style={{ color: '#ec4899' }}></i> Memory
+                                        </h4>
+                                        <div style={{ display: 'flex', gap: '1rem' }}>
+                                            <button
+                                                onClick={() => setFormData({ ...formData, memoryType: 'session' })}
+                                                style={{
+                                                    flex: 1, padding: '1rem', borderRadius: '8px',
+                                                    border: formData.memoryType === 'session' ? '2px solid #ec4899' : '1px solid #e2e8f0',
+                                                    background: formData.memoryType === 'session' ? '#fdf2f8' : 'white',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 600 }}>Short Term</div>
+                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Forgets after chat ends</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setFormData({ ...formData, memoryType: 'long-term' })}
+                                                style={{
+                                                    flex: 1, padding: '1rem', borderRadius: '8px',
+                                                    border: formData.memoryType === 'long-term' ? '2px solid #ec4899' : '1px solid #e2e8f0',
+                                                    background: formData.memoryType === 'long-term' ? '#fdf2f8' : 'white',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 600 }}>Long Term</div>
+                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Remembers user history</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        )
+                    }
+
+                    {/* Step 4: Customize (Was 3) */}
+                    {
+                        currentStep === 4 && (
                             <div className="create-step">
                                 <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
                                     <div className="step-icon-wrapper" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
@@ -1230,9 +1394,9 @@ export default function CreateProjectPage() {
                         )
                     }
 
-                    {/* Step 4: Get Code */}
+                    {/* Step 5: Get Code (Was 4) */}
                     {
-                        currentStep === 4 && (
+                        currentStep === 5 && (
                             <div className="create-step">
                                 <div className="create-step-header" style={{ marginBottom: '1.5rem' }}>
                                     <div className="step-icon-wrapper success" style={{ width: '64px', height: '64px', fontSize: '2rem' }}>
@@ -1394,7 +1558,7 @@ export default function CreateProjectPage() {
                     <i className="fas fa-arrow-left"></i> Back
                 </button>
                 <button
-                    onClick={currentStep === 4 ? handleFinish : handleNext}
+                    onClick={currentStep === 5 ? handleFinish : handleNext}
                     style={{
                         padding: '0.75rem 1.5rem',
                         borderRadius: '8px',
@@ -1409,8 +1573,8 @@ export default function CreateProjectPage() {
                         boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
                     }}
                 >
-                    {currentStep === 4 ? "Finish & Deploy" : "Next Step"}
-                    <i className={`fas ${currentStep === 4 ? 'fa-rocket' : 'fa-arrow-right'}`}></i>
+                    {currentStep === 5 ? "Finish & Deploy" : "Next Step"}
+                    <i className={`fas ${currentStep === 5 ? 'fa-rocket' : 'fa-arrow-right'}`}></i>
                 </button>
             </div >
         </div >
