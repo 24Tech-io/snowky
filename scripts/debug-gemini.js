@@ -2,7 +2,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
-const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDOPvNlB0JetqTMQ5giGyfzA0iiThiyHgc";
+const apiKey = process.env.GEMINI_API_KEY;
 
 console.log("Debug: Testing Gemini API models...");
 console.log(`Debug: API Key present: ${!!apiKey} (Length: ${apiKey?.length})`);
